@@ -38,8 +38,21 @@ services:
     depends_on:
       - vulnerablecode
 
+  elfowl:
+    build: ./elfowl
+    command: /bin/bash
+    env_file:
+      - docker.env
+    ports:
+      - 8080:8080
+    volumes:
+      - ./elfowl/:/elfowl/
+      - data:/elfowl/data
+    depends_on:
+      - vulnerablecode
 
 volumes:
   db_data:
   static:
+  data:
 
