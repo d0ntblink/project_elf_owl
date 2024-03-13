@@ -20,6 +20,7 @@ services:
       - 8000
     volumes:
       - /etc/vulnerablecode/:/etc/vulnerablecode/
+      - ./:/app/
       - static:/var/vulnerablecode/static/
     depends_on:
       - db
@@ -40,14 +41,14 @@ services:
 
   elfowl:
     build: ./elfowl
-    command: /bin/bash
+    command: /bin/bash -c "cd /elfowl/ && python main.py"
     env_file:
       - docker.env
     ports:
-      - 8080:8080
+      - 8888:8888
     volumes:
       - ./elfowl/:/elfowl/
-      - data:/elfowl/data
+      # - data:/elfowl/data
     depends_on:
       - vulnerablecode
 

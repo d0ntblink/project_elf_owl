@@ -32,7 +32,8 @@ environ.Env.read_env(str(ENV_FILE))
 
 SECRET_KEY = env.str("SECRET_KEY")
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[".localhost", "127.0.0.1", ".nginx", "0.0.0.0", "[::1]"])
+# ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[".localhost", "127.0.0.1", "[::1]"])
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
 
 VULNERABLECODE_PASSWORD_MIN_LENGTH = env.int("VULNERABLECODE_PASSWORD_MIN_LENGTH", default=14)
 

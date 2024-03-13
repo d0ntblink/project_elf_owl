@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Result</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Code Analysis</h1><h2><a href="/result/{{ magik_hash }}"><-- Go Back</a></h1>
+        
+        <!-- Text Viewer for File Content -->
+        <div class="file-viewer">
+            <h2>File Content</h2>
+            <div class="line-numbers">
+                <span></span>
+            </div>
+            <textarea readonly>
+                {{ file_content }}
+            </textarea>
+        </div>
+
+        <!-- Best Practices and Security Issues -->
+        <div class="analysis-results">
+            <h2>Analysis Results</h2>
+            <div>
+                <h3>Best Practices Recommendations</h3>
+                <pre>{{ ai_response_json | safe }}</pre>
+            </div>
+        </div>
+
+        <!-- Flow Picture -->
+        <div class="flow-picture">
+            <h2>Flow Picture</h2>
+            <img src="{{ flow_picture_url }}" alt="Flow Picture">
+        </div>
+
+        <!-- Flow Timeline -->
+        <div class="flow-timeline">
+            <h2>Flow Timeline</h2>
+            <!-- Representation of the flow timeline -->
+            <ul>
+                {% for event in timeline %}
+                <li>{{ event.line }}: {{ event.node_name }} - {{ event.action }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

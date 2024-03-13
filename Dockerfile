@@ -18,7 +18,5 @@ ENV PYTHONDONTWRITEBYTECODE 1
 RUN mkdir -p /var/vulnerablecode/static
 
 # Keep the dependencies installation before the COPY of the app/ for proper caching
-COPY setup.cfg setup.py requirements.txt pyproject.toml /app/
-RUN pip install . -c requirements.txt
-
-COPY . /app
+COPY setup.cfg setup.py requirements.txt pyproject.toml /tmp/
+RUN cd /tmp/ && pip install . -c requirements.txt

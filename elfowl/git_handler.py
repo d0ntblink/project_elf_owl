@@ -3,8 +3,9 @@ import logging
 from hashlib import md5
 
 class GitHandler:
-    def __init__(self):
+    def __init__(self, target_directory):
         self.logger = logging.getLogger(__name__)
+        self.target_directory = target_directory
 
     def git_clone(self, repo_origin, repo_branch):
         """
@@ -97,7 +98,7 @@ class GitHandler:
         :return: Directory path.
         """
         repo_name = self._repo_name_from_repo_origin(repo_origin)
-        target_directory = f"./data/downloads/{md5((''.join(map(str, [repo_name, repo_branch]))).encode()).hexdigest()}"
+        target_directory = f"{self.target_directory}/{md5((''.join(map(str, [repo_name, repo_branch]))).encode()).hexdigest()}"
         return target_directory
     
     def _repo_name_from_repo_origin(self, repo_origin):
@@ -149,7 +150,7 @@ class FileManager:
         :return: Path of the requirements.txt file if found, None otherwise.
         """
         try:
-            find_command = ['find', directory_path, '-type', 'f', '-name', 'requirements.txt']
+            find_command = ['find', directory_path, '-type', 'f', '-iname', 'requirements.txt']
             self.logger.debug(f"Running find command: {find_command}")
             requirements_file = subprocess.check_output(find_command, universal_newlines=True).strip()
             if requirements_file:
@@ -197,29 +198,33 @@ if __name__ == "__main__":
     from db_handler import DatabaseManager
     from code_analyzer import PythonASTAnalyzer, PythonDataFlow, CodeCFGAnalyzer, PythonDepandaAnalyzer
     from openai_handler import OpenAIClient
+    from cwe_cve_handler import VulnerableCodeSearch
+    from secret_finder import SecretFinder  
     from json import dumps
-    from secrets import api_key, organization
+    from test_secrets import orgid, apikey
     logging.basicConfig(level=logging.DEBUG)
-    git_handler = GitHandler()
-    db_manager = DatabaseManager("./data/database/git_handler_test.sqlite")
+    git_handler = GitHandler("/elfowl/data/downloads")
+    db_manager = DatabaseManager("/elfowl/data/database/git_handler_test.sqlite")
     file_manager = FileManager()
     ast_analyzer = PythonASTAnalyzer()
     depen_analyzer = PythonDepandaAnalyzer()
     flow_analyzer = PythonDataFlow()
     cfg_analyzer = CodeCFGAnalyzer()
-    model = "gpt-3.5-turbo-1106"
-    openai_client = OpenAIClient(api_key, organization)
+    depen_vuln_search = VulnerableCodeSearch(ip="nginx", lib_type="pypi")
+    model = "gpt-3.5-turbo-0125"
+    openai_client = OpenAIClient(api_key=apikey, organization=orgid)
     db_manager.create_tables()
-    repo_origin = "https://github.com/anil-yelken/Vulnerable-Flask-App"
+    repo_branch = "master"
+    repo_origin = "https://github.com/gouthambs/Flask-Blogging.git"
     branches = git_handler.get_remote_branches(repo_origin)
-    print(branches)
-    repo_branch = branches[0]
     if git_handler.confirm_remote_and_branch_exist(repo_origin, repo_branch):
         print("Remote and branch exist.")
         git_handler.git_clone(repo_origin, repo_branch)
         repo_name = git_handler._repo_name_from_repo_origin(repo_origin)
         print(repo_name)
         repo_location = git_handler._directory_path_from_repo_origin(repo_origin, repo_branch)
+        secret_finder = SecretFinder(config_file='truffles_config.yml', repo_location=repo_location)
+        secrets_found = secret_finder.find_secrets()
         last_commit_msg, last_commit_hash = git_handler.get_last_commit_info(repo_location)
         print(last_commit_msg, last_commit_hash)
         magik_hash, success = db_manager.add_repository(repo_name=repo_name,repo_origin=repo_origin, repo_branch=repo_branch,\
@@ -235,13 +240,12 @@ if __name__ == "__main__":
         with open(requirements_file) as f:
             content = f.read()
             f.close()
-        depen_analyzer.analyze(content=content, code_or_requirements="requirements")
+        depen_analyzer.analyze(content=content)
         if code_file_list:
             for code_file in code_file_list:
                 with open(code_file) as f:
                     content = f.read()
                     f.close()
-                depen_analyzer.analyze(content=content, code_or_requirements="code")
                 owasp_reco = ast_analyzer.analyze(code=content)
                 variable_flow = flow_analyzer.analyze(code=content)
                 cfg_image_location = cfg_analyzer.generate_cfg(code=content)
@@ -263,9 +267,12 @@ if __name__ == "__main__":
                     code_context=content
                 )
                 db_manager.add_information(file_name=code_file, dataflow_json=dumps(variable_flow), owasp_top10_json=dumps(owasp_reco), ai_bp_recommendations_json=bp_json,\
-                    ai_security_recommendations_json=sec_json, cfg_image_relative_location=cfg_image_location, secrets_found_json="", magik_hash=magik_hash)
-            db_manager.add_dependencies(dependencies_json=dumps(depen_analyzer.dependencies), dependencies_cve_vuln_found_json="" , magik_hash=magik_hash)
-                
+                    ai_security_recommendations_json=sec_json, cfg_image_relative_location=cfg_image_location, magik_hash=magik_hash)
+            db_manager.add_dependencies(dependencies_json=dumps(depen_analyzer.dependencies),\
+                dependencies_cve_vuln_found_json=dumps(depen_vuln_search.check_dependencies_vulnerabilities(depen_analyzer.dependencies)),\
+                magik_hash=magik_hash)
+            
+            db_manager.add_secrets_found(secrets_found_json=dumps(secrets_found), magik_hash=magik_hash)
     # delete the database and clean up
     print(f"rm -rf {db_manager._retrieve_fields(field_name="repo_location",table_name="Repository",\
         where_clauses=["repo_name"], where_values=[repo_name])} && rm -rf ./data/database/git_handler_test.sqlite && rm -rf ./data/images/*")

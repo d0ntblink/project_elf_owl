@@ -185,11 +185,17 @@ class PythonASTAnalyzer:
             all(isinstance(value, ast.Compare) for value in node.test.values)
         ):
             for comparison in node.test.values:
-                comparitor_var = comparison.comparators[0].id
-                if comparitor_var in ["password", "pass", "pwd", "token", "secret"\
-                , "passwd", "user", "username", "uname", "email", "email_address"\
-                , "email_address", "e_mail", "e_mail_address", "e_mail_address"\
-                , "user_id", "userid", "uid", "user_name", "user_name", "key", "api_key"]:
+                comparator = comparison.comparators[0]
+                comparitor_var = None
+                
+                # Check if comparator is an identifier (variable name)
+                if isinstance(comparator, ast.Name):
+                    comparitor_var = comparator.id
+                # Check if comparator is a constant (string, number, etc.)
+                elif isinstance(comparator, ast.Constant):
+                    comparitor_var = str(comparator.value)
+                    
+                if comparitor_var and comparitor_var.lower() in ["password", "pass", "pwd", "token", "secret", "passwd", "user", "username", "uname", "email", "email_address", "e_mail", "e_mail_address", "user_id", "userid", "uid", "user_name", "key", "api_key"]:
                     return True
         return False
 
@@ -423,7 +429,7 @@ class PythonDepandaAnalyzer:
         self.dependencies = {}
         self.logger.info("PythonDepandaAnalyzer initialized")
 
-    def analyze(self, content, code_or_requirements="code"):
+    def analyze(self, content):
         """
         Conducts the analysis of dependencies by parsing the requirements file and analyzing the code.
         It identifies the latest versions of the dependencies and their transitive dependencies.
@@ -432,17 +438,17 @@ class PythonDepandaAnalyzer:
         :param code_or_requirements: The type of file to be analyzed (either 'code' or 'requirements'). Default is 'code'.
         :return: A dictionary of dependencies with their corresponding latest versions.
         """
-        self.logger.info(f"Starting dependency analysis for a {code_or_requirements} file")
+        self.logger.info(f"Starting dependency analysis a requirement file")
         self.content = content
         if content == "":
             self.logger.warning(f"file is empty.")
             return self.dependencies
-        if code_or_requirements == "requirements":
-            self._parse_requirements_file()
+        # if code_or_requirements == "requirements":
+        self._parse_requirements_file()
         # elif code_or_requirements == "code":
         #     self._parse_code_file()
-        else:
-            self.logger.warning(f"Invalid file type.")
+        # else:
+        #     self.logger.warning(f"Invalid file type.")
         return self.dependencies
 
     def _parse_requirements_file(self):
@@ -461,7 +467,7 @@ class PythonDepandaAnalyzer:
                     else:
                         package_name = parts[0]
                         # latest_version = self._fetch_latest_version(package_name)
-                        add_version = "version not specified"
+                        add_version = "not specified"
                     self.dependencies = self._resolve_all_dependencies(package_name, add_version, resolved=self.dependencies)
             self.logger.debug("Dependencies parsed successfully.")
         except Exception as e:
@@ -516,7 +522,8 @@ class PythonDepandaAnalyzer:
                     if dep:
                         requirement = Requirement(dep)
                         if requirement.specifier:
-                            dependencies[requirement.name.lower()] = requirement.specifier
+                            specifier = next(iter(requirement.specifier), None)
+                            dependencies[requirement.name.lower()] = f"{specifier.operator}{specifier.version}"
 
             return dependencies
         except requests.RequestException:
@@ -527,7 +534,7 @@ class PythonDepandaAnalyzer:
         updated_resolved = resolved
         updated_resolved[package_name] = version
         sub_dependencies = {}
-        if package_name.lower() in self.checked_dependencies:
+        if package_name.lower() not in self.checked_dependencies:
             sub_dependencies = self._fetch_depndencies_of_pypi_package(package_name)
             self.checked_dependencies.append(package_name.lower())
         updated_resolved.update(sub_dependencies)
@@ -685,9 +692,9 @@ class CodeCFGAnalyzer:
         self.code = code
         cfg = CFGBuilder().build_from_src('code_analysis', self.code)
         filename = f'cfg_{self._generate_hash()}'  # PNG image filename is hash of the code
-        cfg.build_visual(filename, directory="./data/images/", format='png', show=False, cleanup=True, build_keys=False, build_own=False)
+        cfg.build_visual(filename, directory="./static/analysis_images/", format='png', show=False, cleanup=True, build_keys=False, build_own=False)
         self.logger.info(f"CFG image saved as {filename}")
-        return f'./data/images/{filename}.png'
+        return f'/static/analysis_images/{filename}.png'
 
     def _generate_hash(self):
         """

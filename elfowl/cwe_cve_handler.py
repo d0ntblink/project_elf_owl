@@ -1,28 +1,93 @@
 import requests
+import json
+import logging
+
 
 class VulnerableCodeSearch:
-    def __init__(self, ip):
+    def __init__(self, ip, lib_type='pypi'):
+        """
+        Initialize VulnerableCodeSearch instance.
+
+        Args:
+            ip (str): IP address of the API server.
+            dependencies (dict): Dictionary of dependencies with their versions.
+            lib_type (str): Type of the library (default is 'pypi').
+        """
         self.base_url = f"http://{ip}/api"
+        self.lib_type = lib_type
+        logging.info("VulnerableCodeSearch instance created.")
+
+    def check_dependencies_vulnerabilities(self, dependencies):
+        """
+        Check vulnerabilities for dependencies.
+
+        Returns:
+            dict: Dictionary containing updated dependencies with vulnerability information.
+        """
+        logging.info("Checking dependencies vulnerabilities...")
+        updated_dependencies = {}
+        if self.lib_type == 'pypi':
+            for lib_name, requested_version in dependencies.items():
+                logging.debug(f"Checking {lib_name} version {requested_version} for vulnerabilities.")
+                result = self.pypi_operator_action(lib_name, requested_version)
+                if result[0] is not None:
+                    updated_dependencies[lib_name] = result
+        else:
+            logging.error("Library type not supported.")
+            print("Library type not supported.")
+        return updated_dependencies
 
     def get_endpoint(self, endpoint, params=None):
+        """
+        Get API endpoint.
+
+        Args:
+            endpoint (str): Endpoint URL.
+            params (dict): Parameters for the request (default is None).
+
+        Returns:
+            dict: Response JSON data.
+        """
         headers = {'accept': 'application/json'}
         url = f"{self.base_url}/{endpoint}"
+        logging.debug(f"Requesting endpoint: {url}")
         response = requests.get(url, params=params, headers=headers)
         if response.status_code == 200:
             # beautiful json response
             return response.json()['results'][0]
         else:
+            logging.error(f"Error occurred while getting endpoint: {response.text}")
             print("Error occurred while getting endpoint:")
             print(response.text)
             return None
 
-    def search_pypi_pkg(self, pkg_name='', namespace='', show_pkg_vuln='', page=1, page_size=1\
+    def search_pkg(self, name='', namespace='', packagerelatedvulnerability__fix='', page=1, page_size=1\
         , purl='', qualifiers='', subpath='', type='', version=''):
+        """
+        Search for a package.
+
+        Args:
+            name (str): Name of the package.
+            namespace (str): Namespace of the package.
+            packagerelatedvulnerability__fix (str): Vulnerability fix information.
+            page (int): Page number for pagination.
+            page_size (int): Page size for pagination.
+            purl (str): Package URL.
+            qualifiers (str): Qualifiers for the search.
+            subpath (str): Subpath for the search.
+            type (str): Type of the package.
+            version (str): Version of the package.
+
+        Returns:
+            dict: Response JSON data.
+        """
         endpoint = "packages/"
+        
+        # Build params dict from non-empty params
         params = {
-            'name': pkg_name,
+            'name': name,
             'namespace': namespace,
-            'packagerelatedvulnerability__fix': show_pkg_vuln,
+            'packagerelatedvulnerability__fix': packagerelatedvulnerability__fix,
             'page': page,
             'page_size': page_size,
             'purl': purl,
@@ -31,48 +96,87 @@ class VulnerableCodeSearch:
             'type': type,
             'version': version
         }
+        
+        # Filter out empty values
+        params = {k: v for k, v in params.items() if v}
+
         return self.get_endpoint(endpoint=endpoint, params=params)
-    
-    def get_pypi_lib_lastest_vuln_information(self, lib_name, version=''):
-        result = self.search_pypi_pkg(pkg_name=lib_name, type='pypi', version=version)
-        if result['affected_by_vulnerabilities'] == 0:
-            return "No vulnerabilities found for this library"
-        return result['latest_non_vulnerable_version'], result['affected_by_vulnerabilities'], result['fixing_vulnerabilities']
 
-    def search_vulnerabilities(self):
-        endpoint = "vulnerabilities/"
-        return self.get_endpoint(endpoint=endpoint)
+    def pypi_operator_action(self, lib_name, requested_version):
+        """
+        Perform action based on PyPI operator.
 
-    def search_cpes(self):
-        endpoint = "cpes/"
-        return self.get_endpoint(endpoint=endpoint)
+        Args:
+            lib_name (str): Name of the library.
+            requested_version (str): Requested version of the library.
 
-    def search_aliases(self):
-        endpoint = "aliases/"
-        return self.get_endpoint(endpoint=endpoint)
+        Returns:
+            tuple: Tuple containing vulnerability information.
+        """
+        if requested_version == 'not specified':
+            operator, version = ('', '')
+        elif '>=' in requested_version:
+            operator, version = requested_version.split('>=')
+        elif '>' in requested_version:
+            operator, version = requested_version.split('>')
+        elif '<=' in requested_version:
+            operator, version = requested_version.split('<=')
+        elif '<' in requested_version:
+            operator, version = requested_version.split('<')
+        elif '==' in requested_version:
+            operator, version = requested_version.split('==')
+        else:
+            operator, version = (requested_version[0:2], requested_version[2:])
+        requested_version_info = self._search_pypi_lib(lib_name, version)
+        try:
+            if requested_version_info['affected_by_vulnerabilities'] == []:
+                return None, None, None, None, None
+            else:
+                if requested_version_info['latest_non_vulnerable_version'] != "null":
+                    upgraded_version_info = self._search_pypi_lib(lib_name, requested_version_info['latest_non_vulnerable_version'])
+                    if upgraded_version_info['affected_by_vulnerabilities'] == []:
+                        return True,\
+                            operator,\
+                            requested_version,\
+                            upgraded_version_info['version'],\
+                            requested_version_info['affected_by_vulnerabilities'],\
+                            upgraded_version_info['fixing_vulnerabilities']
+                return False, version, None, operator, requested_version_info['affected_by_vulnerabilities'], None
+        except Exception as e:
+            logging.error(f"An error occurred: {e}")
+            return None, None, None, None, None
+            
+    def _search_pypi_lib(self, lib_name, version=''):
+        """
+        Search for a PyPI library.
+
+        Args:
+            lib_name (str): Name of the library.
+            version (str): Version of the library.
+
+        Returns:
+            dict: Response JSON data.
+        """
+        try:
+            result = self.search_pkg(name=lib_name, type='pypi', version=version)
+        except Exception as e:
+            logging.error(f"An error occurred while searching PyPI package: {e}")
+            result = None
+        return result
+                
 
 if __name__ == "__main__":
     # Example usage:
-    search_instance = VulnerableCodeSearch("localhost")
-
-    # Search for PyPI library
-    while True:
-        library_search_result = search_instance.get_pypi_lib_lastest_vuln_information(input())
-        for i in library_search_result:
-            for j in i:
-                print(j,"\n")
-
-    # # Search for vulnerabilities
-    # vulnerabilities_result = search_instance.search_vulnerabilities()
-    # print("\nVulnerabilities Search Result:")
-    # print(vulnerabilities_result)
-
-    # # Search for CPES
-    # cpes_result = search_instance.search_cpes()
-    # print("\nCPES Search Result:")
-    # print(cpes_result)
-
-    # # Search for aliases
-    # aliases_result = search_instance.search_aliases()
-    # print("\nAliases Search Result:")
-    # print(aliases_result)
+    from code_analyzer import PythonDepandaAnalyzer
+    logging.basicConfig(level=logging.DEBUG)
+    analyzer = PythonDepandaAnalyzer()
+    with open("/example/requirements.txt") as f:
+        text = f.read()
+        f.close()
+    analyzer.analyze(content=text)
+    input_dict = analyzer.dependencies
+    search_instance = VulnerableCodeSearch("nginx", "pypi")
+    vulnerable_apps = search_instance.check_dependencies_vulnerabilities(input_dict)
+    print("Vulnerable applications and their vulnerabilities:")
+    print(vulnerable_apps)
+    print(len(input_dict),len(vulnerable_apps))

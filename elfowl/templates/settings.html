@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Code Analysis Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>Settings</h1>
+
+    <!-- Settings Form -->
+    <form action="/settings" method="POST">
+        <div class="form-group">
+            <label for="api_key">OpenAI API Key:</label>
+            <input type="text" id="api_key" name="api_key" required placeholder="Enter your OpenAI API key" value="{{ session['api_key']|default('', true) }}">
+        </div>
+
+        <div class="form-group">
+            <label for="organization">OpenAI Organization ID:</label>
+            <input type="text" id="organization" name="organization" required placeholder="Enter your OpenAI organization ID" value="{{ session['organization']|default('', true) }}">
+        </div>
+
+        <div class="form-group">
+            <label for="model">Model:</label>
+            <select id="model" name="model">
+                <option value="gpt-3.5-turbo-1106" {{ 'selected' if session.get('model') == 'gpt-3.5-turbo-1106' }}>GPT-3.5 Turbo</option>
+                <option value="other_model" {{ 'selected' if session.get('model') == 'other_model' }}>Other Model</option>
+                <!-- Add other models as needed -->
+            </select>
+        </div>
+
+        <button type="submit">Save Settings</button>
+    </form>
+
+    <!-- Link back to the main page -->
+    <p><a href="/">Back to Dashboard</a></p>
+
+    <!-- Additional instructions or information can go here -->
+</body>
+</html>

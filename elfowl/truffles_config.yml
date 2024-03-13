@@ -1,0 +1,54 @@
+detectors:
+  - name: PasswordDetector1
+    keywords:
+      - password
+      - passwd
+      - pass
+    regex:
+      password: "\\b(\\S*password\\S*)\\b\\s*=\\s*[\"']?\\s*\\S+[\"']?"
+  - name: SecretDetector
+    keywords:
+      - secret
+    regex:
+      secret: "\\b(\\S*secret\\S*)\\b\\s*=\\s*[\"']?\\s*\\S+[\"']?"
+  - name: Key
+    keywords:
+      - key
+    regex:
+      key: "\\b(\\S*key\\S*)\\b\\s*=\\s*[\"']?\\s*\\S+[\"']?"
+  - name: Token
+    keywords:
+      - token
+    regex:
+      token: "\\b(\\S*token\\S*)\\b\\s*=\\s*[\"']?\\s*\\S+[\"']?"
+  - name: CredentialDetector
+    keywords:
+      - credential
+    regex:
+      credential: "\\b(\\S*credential\\S*)\\b\\s*=\\s*[\"']?\\s*\\S+[\"']?"
+  - name: AuthDetector
+    keywords:
+      - auth
+      - authentication
+    regex:
+      auth: "\\b(\\S*auth\\S*)\\b\\s*=\\s*[\"']?\\s*\\S+[\"']?"
+  - name: PassphraseDetector
+    keywords:
+      - passphrase
+    regex:
+      passphrase: "\\b(\\S*passphrase\\S*)\\b\\s*=\\s*[\"']?\\s*\\S+[\"']?"
+  - name: KeypairDetector
+    keywords:
+      - keypair
+    regex:
+      keypair: "\\b(\\S*keypair\\S*)\\b\\s*=\\s*[\"']?\\s*\\S+[\"']?"
+  - name: CertificateDetector
+    keywords:
+      - certificate
+    regex:
+      certificate: "\\b(\\S*certificate\\S*)\\b\\s*=\\s*[\"']?\\s*\\S+[\"']?"
+  - name: LoginDetector
+    keywords:
+      - login
+    regex:
+      login: "\\b(\\S*login\\S*)\\b\\s*=\\s*[\"']?\\s*\\S+[\"']?"

@@ -39,7 +39,10 @@ class OpenAIClient:
             context = code_context
             messages = self._construct_best_practices_prompt(context)
 
-        max_tokens = self._count_tokens(model, messages)
+        # Calculate max tokens but ensure it does not exceed the model's limit
+        calculated_max_tokens = self._count_tokens(model, messages)
+        max_tokens = min(calculated_max_tokens, 4096)  # Adjust this limit based on the model's capabilities
+
         response = self.client.chat.completions.create(
             model=model,
             temperature=temperature,
@@ -69,6 +72,7 @@ class OpenAIClient:
             {{
                 issueTitle: "Descriptive title of the issue",
                 issue: "The code directly concatenates user input into the `subprocess.check_output` command, making it vulnerable to command injection attacks.",
+                fix: "Use `subprocess.run` with the `shell` parameter set to `True` to prevent command injection.",
                 lines: 45-53,
                 CWE: "CWE-78",
                 impact: "Attackers can execute arbitrary commands on the server, leading to unauthorized access, data manipulation, and potential system compromise."
@@ -102,13 +106,14 @@ class OpenAIClient:
         Scrutinize each line and larger code constructs for compliance with industry best practices, particularly in areas like error handling, input validation.
         Critically analyze the code for potential bugs or edge cases and suggest how to address them.
         Example Response in JSON format:
-        recomendations: [
+        recommendations: [
             {{
-                issue: "Avoid the use of digits in variable names.",
-                Line: "53",
-                recomendation: "change the variable name from `var1` to `user_input`."
+                issueTitle: "Avoid the use of digits in variable names.",
+                issue: "Single-letter variable names like `v` are not descriptive and can lead to confusion. Use meaningful variable names to improve code readability.",
+                lines: 53-59,
+                recommendation: "change the variable name from `var1` to `user_input_varible`."
             }},
-            // Additional recomendations can be concatenated in a similar format
+            // Additional recommendation can be concatenated in a similar format
         ]
         #### Code:
         {context}

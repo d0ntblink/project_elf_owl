@@ -22,6 +22,10 @@ RUN set -exu \
     && apt-get autoremove --yes \
     && rm -rf /var/lib/apt/lists/*
 
+# Install trufflehog
+RUN set -exu \
+    && curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+
 # Set build arguments
 ARG APP_DIR=/application
 ARG APP_GROUP=birdwatcher

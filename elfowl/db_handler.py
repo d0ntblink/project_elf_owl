@@ -51,7 +51,6 @@ class DatabaseManager:
                     ai_bp_recommendations_json TEXT,
                     ai_security_recommendations_json TEXT,
                     cfg_image_relative_location TEXT,
-                    secrets_found_json TEXT,
                     magik_hash TEXT NOT NULL
                 )
             ''')
@@ -61,6 +60,14 @@ class DatabaseManager:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     dependencies_json TEXT,
                     dependencies_cve_vuln_found_json TEXT,
+                    magik_hash TEXT NOT NULL UNIQUE
+                )
+            ''')
+            # Create SecretsFound Table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS SecretsFound (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    secrets_found_json TEXT,
                     magik_hash TEXT NOT NULL UNIQUE
                 )
             ''')
@@ -128,8 +135,7 @@ class DatabaseManager:
             return None, False
 
     def add_information(self, file_name, dataflow_json, owasp_top10_json, ai_bp_recommendations_json,
-                        ai_security_recommendations_json, cfg_image_relative_location, secrets_found_json,
-                        magik_hash):
+                        ai_security_recommendations_json, cfg_image_relative_location, magik_hash):
         """
         Adds a new information record to the InformationMap table.
 
@@ -139,7 +145,6 @@ class DatabaseManager:
         :param ai_bp_recommendations_json: JSON string of AI best practices recommendations.
         :param ai_security_recommendations_json: JSON string of AI security recommendations.
         :param cfg_image_relative_location: Relative location of the CFG image.
-        :param secrets_found_json: JSON string of found secrets.
         :param magik_hash: Magik hash associated with the information.
         """
         try:
@@ -148,12 +153,10 @@ class DatabaseManager:
             cursor.execute('''
                 INSERT INTO InformationMap (file_name, dataflow_json, owasp_top10_json,
                                            ai_bp_recommendations_json, ai_security_recommendations_json,
-                                           cfg_image_relative_location, secrets_found_json,
-                                           magik_hash)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                           cfg_image_relative_location, magik_hash)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (file_name, dataflow_json, owasp_top10_json, ai_bp_recommendations_json,
-                  ai_security_recommendations_json, cfg_image_relative_location, secrets_found_json,
-                  magik_hash))
+                  ai_security_recommendations_json, cfg_image_relative_location, magik_hash))
             conn.commit()
             self.logger.info("Information added successfully.")
             return True
@@ -179,6 +182,28 @@ class DatabaseManager:
                 INSERT INTO DependenciesMap (dependencies_json , dependencies_cve_vuln_found_json, magik_hash)
                 VALUES (?, ?, ?)
             ''', (dependencies_json, dependencies_cve_vuln_found_json, magik_hash))
+            conn.commit()
+            self.logger.info("Information added successfully.")
+        except sqlite3.Error as e:
+            self.logger.error(f"Error adding information: {e}")
+        finally:
+            if conn:
+                conn.close()
+    
+    def add_secrets_found(self, secrets_found_json, magik_hash):
+        """
+        Adds a new information record to the InformationMap table.
+
+        :param secrets_found_json: JSON string of secrets found.
+        :param magik_hash: Magik hash associated with the information.
+        """
+        try:
+            conn = sqlite3.connect(self.db_file)
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO SecretsFound (secrets_found_json, magik_hash)
+                VALUES (?, ?)
+            ''', (secrets_found_json, magik_hash))
             conn.commit()
             self.logger.info("Information added successfully.")
         except sqlite3.Error as e:
@@ -223,6 +248,49 @@ class DatabaseManager:
         else:
             self.logger.warning(f"No file names found for magik hash {magik_hash}")
             return []
+
+    def retrieve_tables_by_magik_hash(self, magik_hash):
+        """
+        Retrieves rows of information from every table that matches the given magik_hash.
+
+        :param magik_hash: The magik hash to filter by.
+        :return: A dictionary containing information from all relevant tables.
+        """
+        info = {}
+        try:
+            conn = sqlite3.connect(self.db_file)
+            cursor = conn.cursor()
+            # Retrieve Repository info
+            cursor.execute('SELECT * FROM Repository WHERE magik_hash = ?', (magik_hash,))
+            repo_info = cursor.fetchone()
+            if repo_info:
+                info['Repository'] = repo_info
+
+            # Retrieve InformationMap info
+            cursor.execute('SELECT * FROM InformationMap WHERE magik_hash = ?', (magik_hash,))
+            info_map = cursor.fetchall()
+            if info_map:
+                info['InformationMap'] = info_map
+
+            # Retrieve DependenciesMap info
+            cursor.execute('SELECT * FROM DependenciesMap WHERE magik_hash = ?', (magik_hash,))
+            dependencies_info = cursor.fetchone()
+            if dependencies_info:
+                info['DependenciesMap'] = dependencies_info
+
+            # Retrieve SecretsFound info
+            cursor.execute('SELECT * FROM SecretsFound WHERE magik_hash = ?', (magik_hash,))
+            secrets_found_info = cursor.fetchone()
+            if secrets_found_info:
+                info['SecretsFound'] = secrets_found_info
+
+            return info
+        except sqlite3.Error as e:
+            self.logger.error(f"Error retrieving information by magik_hash {magik_hash}: {e}")
+            return None
+        finally:
+            if conn:
+                conn.close()
 
     def retrieve_field_by_magik_hash_and_filename(self, magik_hash, filename, field_name):
         """
@@ -351,6 +419,29 @@ class DatabaseManager:
             return result
         else:
             return None
+        
+    def _get_table(self, table_name):
+        """
+        Retrieves the entire table.
+
+        :param table_name: Name of the table.
+        :return: The table, or None if not found.
+        """
+        try:
+            conn = sqlite3.connect(self.db_file)
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT * FROM {table_name}")
+            result = cursor.fetchall()
+            if result:
+                return result
+            else:
+                return None
+        except sqlite3.Error as e:
+            self.logger.error(f"Error retrieving table: {e}")
+            return None
+        finally:
+            if conn:
+                conn.close()
 
 
 if __name__ == "__main__":
@@ -360,63 +451,63 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     # Initialize the DatabaseManager with the database file
-    db_manager = DatabaseManager('./data/database/db_handler_test.sqlite')
+    db_manager = DatabaseManager('./data/database/git_handler_test.sqlite')
+    tables = db_manager._get_table("Repository")
+    print(tables)
+    # # Check if the database exists, if not, create it
+    # db_manager.create_tables()
+    # def random_string(length=5):
+    #     letters = string.ascii_lowercase
+    #     return ''.join(random.choice(letters) for _ in range(length))
+    # # Add repositories
+    # hash_list = []
+    # repo_and_branch = {}
+    # for i in range(3):
+    #     repo_name = random_string(5)
+    #     repo_origin = f"https://github.com/{repo_name}"
+    #     repo_branch = 'dev' + random_string(4)
+    #     lcmsg = random_string(20)
+    #     lcshh = random_string(7)
+    #     added_by = random_string(5)
+    #     hash_list.append(db_manager._generate_magik_hash(repo_name, repo_branch, lcshh))
+    #     repo_and_branch[repo_name] = repo_branch
+    #     repo_location = f"./data/downloads/{hashlib.md5((''.join(map(str, [repo_name, repo_branch]))).encode()).hexdigest()}"
+    #     db_manager.add_repository(repo_name, repo_origin, repo_branch, repo_location, added_by, lcmsg, lcshh)
 
-    # Check if the database exists, if not, create it
-    db_manager.create_tables()
-    def random_string(length=5):
-        letters = string.ascii_lowercase
-        return ''.join(random.choice(letters) for _ in range(length))
-    # Add repositories
-    hash_list = []
-    repo_and_branch = {}
-    for i in range(3):
-        repo_name = random_string(5)
-        repo_origin = f"https://github.com/{repo_name}"
-        repo_branch = 'dev' + random_string(4)
-        lcmsg = random_string(20)
-        lcshh = random_string(7)
-        added_by = random_string(5)
-        hash_list.append(db_manager._generate_magik_hash(repo_name, repo_branch, lcshh))
-        repo_and_branch[repo_name] = repo_branch
-        repo_location = f"./data/downloads/{hashlib.md5((''.join(map(str, [repo_name, repo_branch]))).encode()).hexdigest()}"
-        db_manager.add_repository(repo_name, repo_origin, repo_branch, repo_location, added_by, lcmsg, lcshh)
+    # # Sync repositories
+    # for repo, branch in repo_and_branch.items():
+    #     last_synced_by = random_string(5)
+    #     last_commit_msg = random_string(20)
+    #     last_commit_short_hash = random_string(7)
+    #     db_manager.sync_repository(repo, branch, last_synced_by, last_commit_msg, last_commit_short_hash)
 
-    # Sync repositories
-    for repo, branch in repo_and_branch.items():
-        last_synced_by = random_string(5)
-        last_commit_msg = random_string(20)
-        last_commit_short_hash = random_string(7)
-        db_manager.sync_repository(repo, branch, last_synced_by, last_commit_msg, last_commit_short_hash)
-
-    # Add information
-    for i in range(40):
-        dataflow_json = json.dumps({"data": random_string(5)})
-        dependencies_json = json.dumps({"dependencies": random_string(5)})
-        owasp_top10_json = json.dumps({"owasp": random_string(5)})
-        ai_bp_recommendations_json = json.dumps({"ai_bp": random_string(5)})
-        ai_security_recommendations_json = json.dumps({"ai_security": random_string(5)})
-        cfg_image_relative_location = random_string(5)
-        secrets_found_json = json.dumps({"secrets": random_string(5)})
-        dependencies_cve_vuln_found_json = json.dumps({"cve_vuln": random_string(5)})
-        file_name = random_string(5)
-        magik_hash = random.choice(hash_list)
-        db_manager.add_information(dataflow_json, dependencies_json, owasp_top10_json, ai_bp_recommendations_json,
-                                   ai_security_recommendations_json, cfg_image_relative_location, secrets_found_json,
-                                   dependencies_cve_vuln_found_json, file_name, magik_hash)
+    # # Add information
+    # for i in range(40):
+    #     dataflow_json = json.dumps({"data": random_string(5)})
+    #     dependencies_json = json.dumps({"dependencies": random_string(5)})
+    #     owasp_top10_json = json.dumps({"owasp": random_string(5)})
+    #     ai_bp_recommendations_json = json.dumps({"ai_bp": random_string(5)})
+    #     ai_security_recommendations_json = json.dumps({"ai_security": random_string(5)})
+    #     cfg_image_relative_location = random_string(5)
+    #     dependencies_cve_vuln_found_json = json.dumps({"cve_vuln": random_string(5)})
+    #     file_name = random_string(5)
+    #     magik_hash = random.choice(hash_list)
+    #     db_manager.add_information(dataflow_json, dependencies_json, owasp_top10_json, ai_bp_recommendations_json,
+    #                                ai_security_recommendations_json, cfg_image_relative_location,
+    #                                dependencies_cve_vuln_found_json, file_name, magik_hash)
     
-    # Retrieve filenames by magik hash
-    magik_hash = random.choice(hash_list)
-    print(db_manager.get_filenames_by_magik_hash(magik_hash))
+    # # Retrieve filenames by magik hash
+    # magik_hash = random.choice(hash_list)
+    # print(db_manager.get_filenames_by_magik_hash(magik_hash))
     
-    # Retrieve field by magik hash and filename
-    magik_hash = random.choice(hash_list)
-    filename = random_string(5)
-    print(db_manager.retrieve_field_by_magik_hash_and_filename(magik_hash, filename, "dataflow_json"))
+    # # Retrieve field by magik hash and filename
+    # magik_hash = random.choice(hash_list)
+    # filename = random_string(5)
+    # print(db_manager.retrieve_field_by_magik_hash_and_filename(magik_hash, filename, "dataflow_json"))
     
-    # Retrieve field by repo name and branch
-    repo_name = random.choice(list(repo_and_branch.keys()))
-    print
-    repo_branch = repo_and_branch[repo_name]
-    print(db_manager.retrieve_field_by_repo_name_and_branch(repo_name, repo_branch, "last_commit_msg"))
+    # # Retrieve field by repo name and branch
+    # repo_name = random.choice(list(repo_and_branch.keys()))
+    # print
+    # repo_branch = repo_and_branch[repo_name]
+    # print(db_manager.retrieve_field_by_repo_name_and_branch(repo_name, repo_branch, "last_commit_msg"))
     
