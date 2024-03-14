@@ -676,11 +676,12 @@ class CodeCFGAnalyzer:
     """
     Generates a Control Flow Graph (CFG) for a given Python code snippet.
     """
-    def __init__(self):
+    def __init__(self, save_image_location):
         """
         Initializes the CFG analyzer with Python code.
         """
         self.logger = logging.getLogger(__name__)
+        self.save_image_location = save_image_location
 
     def generate_cfg(self, code):
         """
@@ -692,9 +693,9 @@ class CodeCFGAnalyzer:
         self.code = code
         cfg = CFGBuilder().build_from_src('code_analysis', self.code)
         filename = f'cfg_{self._generate_hash()}'  # PNG image filename is hash of the code
-        cfg.build_visual(filename, directory="./static/analysis_images/", format='png', show=False, cleanup=True, build_keys=False, build_own=False)
+        cfg.build_visual(filename, directory=self.save_image_location, format='png', show=False, cleanup=True, build_keys=False, build_own=False)
         self.logger.info(f"CFG image saved as {filename}")
-        return f'/static/analysis_images/{filename}.png'
+        return f'{self.save_image_location}{filename}.png'
 
     def _generate_hash(self):
         """

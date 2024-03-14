@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *secrets.py
-*/static/analysis_images/*
+*/data/images/*
 */data/database/*
 */data/downloads/*
 

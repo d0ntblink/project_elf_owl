@@ -4,36 +4,39 @@ import logging
 
 
 class VulnerableCodeSearch:
-    def __init__(self, ip, lib_type='pypi'):
+    def __init__(self, vuln_code_host):
         """
         Initialize VulnerableCodeSearch instance.
 
         Args:
-            ip (str): IP address of the API server.
+            vuln_code_host (str): host address of the API server.
             dependencies (dict): Dictionary of dependencies with their versions.
-            lib_type (str): Type of the library (default is 'pypi').
         """
-        self.base_url = f"http://{ip}/api"
-        self.lib_type = lib_type
-        logging.info("VulnerableCodeSearch instance created.")
+        self.logger = logging.getLogger(__name__)
+        self.base_url = f"http://{vuln_code_host}/api"
+        self.logger.info("VulnerableCodeSearch instance created.")
 
-    def check_dependencies_vulnerabilities(self, dependencies):
+    def check_dependencies_vulnerabilities(self, dependencies, pkg_type='pypi'):
         """
         Check vulnerabilities for dependencies.
+        
+        Parameters:
+            dependencies (dict): Dictionary of dependencies with their versions.
+            pkg_type (str): Type of the package (default is 'pypi').
 
         Returns:
             dict: Dictionary containing updated dependencies with vulnerability information.
         """
-        logging.info("Checking dependencies vulnerabilities...")
+        self.logger.info("Checking dependencies vulnerabilities...")
         updated_dependencies = {}
-        if self.lib_type == 'pypi':
+        if pkg_type == 'pypi':
             for lib_name, requested_version in dependencies.items():
-                logging.debug(f"Checking {lib_name} version {requested_version} for vulnerabilities.")
+                self.logger.debug(f"Checking {lib_name} version {requested_version} for vulnerabilities.")
                 result = self.pypi_operator_action(lib_name, requested_version)
                 if result[0] is not None:
                     updated_dependencies[lib_name] = result
         else:
-            logging.error("Library type not supported.")
+            self.logger.error("Library type not supported.")
             print("Library type not supported.")
         return updated_dependencies
 
@@ -50,13 +53,13 @@ class VulnerableCodeSearch:
         """
         headers = {'accept': 'application/json'}
         url = f"{self.base_url}/{endpoint}"
-        logging.debug(f"Requesting endpoint: {url}")
+        self.logger.debug(f"Requesting endpoint: {url}")
         response = requests.get(url, params=params, headers=headers)
         if response.status_code == 200:
             # beautiful json response
             return response.json()['results'][0]
         else:
-            logging.error(f"Error occurred while getting endpoint: {response.text}")
+            self.logger.error(f"Error occurred while getting endpoint: {response.text}")
             print("Error occurred while getting endpoint:")
             print(response.text)
             return None
@@ -143,7 +146,7 @@ class VulnerableCodeSearch:
                             upgraded_version_info['fixing_vulnerabilities']
                 return False, version, None, operator, requested_version_info['affected_by_vulnerabilities'], None
         except Exception as e:
-            logging.error(f"An error occurred: {e}")
+            self.logger.error(f"An error occurred: {e}")
             return None, None, None, None, None
             
     def _search_pypi_lib(self, lib_name, version=''):
@@ -160,7 +163,7 @@ class VulnerableCodeSearch:
         try:
             result = self.search_pkg(name=lib_name, type='pypi', version=version)
         except Exception as e:
-            logging.error(f"An error occurred while searching PyPI package: {e}")
+            self.logger.error(f"An error occurred while searching PyPI package: {e}")
             result = None
         return result
                 

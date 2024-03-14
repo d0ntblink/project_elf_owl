@@ -51,6 +51,7 @@ class DatabaseManager:
                     ai_bp_recommendations_json TEXT,
                     ai_security_recommendations_json TEXT,
                     cfg_image_relative_location TEXT,
+                    secrets_found_json TEXT,
                     magik_hash TEXT NOT NULL
                 )
             ''')
@@ -60,14 +61,6 @@ class DatabaseManager:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     dependencies_json TEXT,
                     dependencies_cve_vuln_found_json TEXT,
-                    magik_hash TEXT NOT NULL UNIQUE
-                )
-            ''')
-            # Create SecretsFound Table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS SecretsFound (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    secrets_found_json TEXT,
                     magik_hash TEXT NOT NULL UNIQUE
                 )
             ''')
@@ -135,7 +128,7 @@ class DatabaseManager:
             return None, False
 
     def add_information(self, file_name, dataflow_json, owasp_top10_json, ai_bp_recommendations_json,
-                        ai_security_recommendations_json, cfg_image_relative_location, magik_hash):
+                        ai_security_recommendations_json, cfg_image_relative_location, secrets_found_json, magik_hash):
         """
         Adds a new information record to the InformationMap table.
 
@@ -145,6 +138,7 @@ class DatabaseManager:
         :param ai_bp_recommendations_json: JSON string of AI best practices recommendations.
         :param ai_security_recommendations_json: JSON string of AI security recommendations.
         :param cfg_image_relative_location: Relative location of the CFG image.
+        :param secrets_found_json: JSON string of found secrets.
         :param magik_hash: Magik hash associated with the information.
         """
         try:
@@ -153,10 +147,10 @@ class DatabaseManager:
             cursor.execute('''
                 INSERT INTO InformationMap (file_name, dataflow_json, owasp_top10_json,
                                            ai_bp_recommendations_json, ai_security_recommendations_json,
-                                           cfg_image_relative_location, magik_hash)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                                           cfg_image_relative_location, secrets_found_json, magik_hash)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (file_name, dataflow_json, owasp_top10_json, ai_bp_recommendations_json,
-                  ai_security_recommendations_json, cfg_image_relative_location, magik_hash))
+                  ai_security_recommendations_json, cfg_image_relative_location, secrets_found_json, magik_hash))
             conn.commit()
             self.logger.info("Information added successfully.")
             return True
@@ -278,12 +272,6 @@ class DatabaseManager:
             if dependencies_info:
                 info['DependenciesMap'] = dependencies_info
 
-            # Retrieve SecretsFound info
-            cursor.execute('SELECT * FROM SecretsFound WHERE magik_hash = ?', (magik_hash,))
-            secrets_found_info = cursor.fetchone()
-            if secrets_found_info:
-                info['SecretsFound'] = secrets_found_info
-
             return info
         except sqlite3.Error as e:
             self.logger.error(f"Error retrieving information by magik_hash {magik_hash}: {e}")
@@ -366,7 +354,7 @@ class DatabaseManager:
             if conn:
                 conn.close()
                 
-    def _set_fields(self, table_name, set_clauses, set_values, where_clauses, where_values):
+    def _set_fields(self, table_name, set_clauses, set_values, where_clauses=["1"], where_values=["1"]):
         """
         Sets specific fields in a given table based on provided WHERE clauses.
 

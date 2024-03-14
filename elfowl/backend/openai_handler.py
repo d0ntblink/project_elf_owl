@@ -7,15 +7,15 @@ class OpenAIClient:
     A client for interacting with OpenAI's API to generate responses for various tasks,
     including security analysis and best practices suggestions for code.
     """
-    def __init__(self, api_key, organization):
+    def __init__(self, api_key, org_id):
         """
         Initializes the OpenAI client with API key and organization information.
 
         :param api_key: The API key for OpenAI.
-        :param organization: The organization ID for OpenAI.
+        :param org_id: The organization ID for OpenAI.
         """
         self.logger = logging.getLogger('OpenAIClient')
-        self.client = OpenAI(api_key=api_key, organization=organization)
+        self.client = OpenAI(api_key=api_key, organization=org_id)
         self.logger.debug("OpenAI client initialized")
 
     def generate_response(self, task_type, model, temperature, frequency_penalty, presence_penalty, code_context, assistant_context=""):
@@ -73,7 +73,7 @@ class OpenAIClient:
                 "issueTitle": "Descriptive title of the issue",
                 "issue": "The code directly concatenates user input into the `subprocess.check_output` command, making it vulnerable to command injection attacks.",
                 "fix": "Use `subprocess.run` with the `shell` parameter set to `True` to prevent command injection.",
-                "lines": "45 - 53",
+                "lineRange": "45 - 53",
                 "CWE": "CWE-78",
                 "impact": "Attackers can execute arbitrary commands on the server, leading to unauthorized access, data manipulation, and potential system compromise."
             }}]
@@ -109,7 +109,7 @@ class OpenAIClient:
             "recommendations": [{{
                 "issueTitle": "Avoid the use of digits in variable names.",
                 "issue": "Single-letter variable names like `v` are not descriptive and can lead to confusion. Use meaningful variable names to improve code readability.",
-                "lines": "53 - 59",
+                "lineRange": "53 - 59",
                 "recommendation": "change the variable name from `var1` to `user_input_varible`."
             }}]
         }}

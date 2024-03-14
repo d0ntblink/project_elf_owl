@@ -1,248 +1,182 @@
-from flask import Flask, render_template, request, session, send_from_directory
 from db_handler import DatabaseManager
 from code_analyzer import PythonASTAnalyzer, PythonDataFlow, CodeCFGAnalyzer, PythonDepandaAnalyzer
 from openai_handler import OpenAIClient
 from cwe_cve_handler import VulnerableCodeSearch
 from secret_finder import SecretFinder
 from git_handler import GitHandler
-from git_handler import FileManager
-from test_secrets import apikey, orgid
+from file_manager import FileManager
+from threading_handler import ThreadHandler
 from json import dumps, loads
-import logging, os, time
+import logging
 
-app = Flask(__name__)
-logger = logging.getLogger(__name__)
-app.secret_key = 'your_secret_key'
-db_manager = DatabaseManager("/elfowl/data/database/git_handler_test.sqlite")
-
-@app.route("/", methods=["GET", "POST"])
-def index():
-    repositories = db_manager._get_table(table_name="Repository")
-    logger.debug(f"Repositories: {repositories}")
-    if request.method == "POST":
-        repo_origin = request.form["repo_origin"]
-        repo_branch = request.form["repo_branch"]
-        # Perform the code sequence
-        perform_code_sequence(repo_origin, repo_branch)
-        return render_template("index.html", message="Code sequence performed successfully!", repositories=repositories)
-    else:
+class runDashboard:
+    
+    def __init__(self, db_file, repo_locations, image_store_location, openai_model,\
+        api_key, org_id, vuln_code_host, truffles_config_file):
+        self.logger = logging.getLogger(__name__)
+        self.gitHandler = GitHandler(repo_locations)
+        self.vulnCodeSearch = VulnerableCodeSearch(vuln_code_host=vuln_code_host)
+        self.fileManager = FileManager()
+        self.databaseManager = DatabaseManager(db_file)
+        self.openaiClient = OpenAIClient(api_key=api_key, org_id=org_id)
+        # self.threadHandler = ThreadHandler()
+        self.secretFinder = SecretFinder(config_file=truffles_config_file)
+        self.cfgAnalyzer = CodeCFGAnalyzer(save_image_location=image_store_location)
+        self.image_store_location = image_store_location
+        self.repo_locations = repo_locations
+        self.db_location = db_file
+        self.openai_model = openai_model
+        self.magik_hash = ""
         
-        return render_template("index.html", repositories=repositories)
-    
-@app.route("/settings", methods=["GET", "POST"])
-def settings():
-    if request.method == "POST":
-        # Save settings to session
-        session['api_key'] = request.form.get('api_key')
-        session['organization'] = request.form.get('organization')
-        session['model'] = request.form.get('model', 'gpt-3.5-turbo-1106')  # Default model
-        return render_template("index.html", message="Settings saved!")
-    else:
-        return render_template("settings.html")
-
-@app.route("/result/<magik_hash>", methods=["GET"])
-def result(magik_hash):
-    db = db_manager.retrieve_tables_by_magik_hash(magik_hash)
-    if not db:
-        return "No information found for this identifier", 404
-    logger.debug(f"Got database")
-    
-    informationMap = db.get('InformationMap', [])
-    if not informationMap:
-        return "No detailed information found for this identifier", 404
-    logger.debug(f"Got informationMap")
-    analysis_entries = {}
-    for entry in informationMap:
-        row = entry[0]-1
-        s = "/"
-        file_name = s.join(entry[1].split("/")[5:])
-        url = f"/result/{magik_hash}/analysis/{row}"
-        analysis_entries[file_name] = url
-
-    dependenciesMap = db.get('DependenciesMap', [])
-    if not dependenciesMap:
-        return "No dependencies found for this identifier", 404
-    logger.debug(f"Got dependenciesMap")
-    dependencies = dumps(loads(dependenciesMap[1]), indent=2)
-    dependencies_vuln = dumps(loads(dependenciesMap[2]), indent=2)
-    
-    secretsFound = db.get('SecretsFound', [])
-    if not secretsFound:
-        return "No secrets found for this identifier", 404
-    logger.debug(f"Got secretsFound")
-    secrets_found = dumps(loads(secretsFound[1]), indent=2)
-    
-    return render_template("result.html", analysis_entries=analysis_entries, dependencies=dependencies,\
-        dependencies_vuln=dependencies_vuln, secretsFound=secrets_found, magik_hash=magik_hash)
-    
+    def setup_tables(self):
+        self.databaseManager.create_tables()
         
-
-@app.route("/result/<magik_hash>/analysis/<row>", methods=["GET"])
-def analysis_result(magik_hash, row):
-    info = db_manager.retrieve_tables_by_magik_hash(magik_hash)
-    if not info:
-        return "No information found for this identifier", 404
+    def new_repo_sequence(self, repo_origin, repo_branch):
+        self.logger.info(f"Repository analysis started for {repo_origin} and branch {repo_branch}")
+        branches = self.get_remote_branches(repo_origin)
+        if branches is None:
+            self.logger.error("No branches found")
+            return None
+        repo_location, repo_name = self.download_repositories(repo_origin, repo_branch)
+        if repo_location is None:
+            self.logger.error("Error downloading repository")
+            return None
+        magik_hash = self.add_repository(repo_origin, repo_branch, repo_location, repo_name)
+        if magik_hash is None:
+            self.logger.error("Error adding repository")
+            return None
+        self.analyze_repo(repo_location, magik_hash)
+        self.logger.info(f"Repository analysis completed for {repo_origin} and branch {repo_branch}, magik hash: {magik_hash}")
+        return magik_hash
+        
+    def get_remote_branches(self, repo_origin):
+        try:
+            branches = self.gitHandler.get_remote_branches(repo_origin)
+            self.logger.info(f"Branches: {branches}")
+            return branches
+        except Exception as e:
+            self.logger.error(f"Remote doesn't exist or is not accessible: {e}")
+            return None
     
-    # Assuming 'info' is a dict with keys corresponding to table names
-    informationMap = info.get('InformationMap', [])
-    rowint = int(row)
-    if not informationMap:
-        return "No detailed information found for this identifier", 404
+    def download_repositories(self, repo_origin, repo_branch):
+        if self.gitHandler.confirm_remote_and_branch_exist(repo_origin, repo_branch):
+            self.logger.info("Remote and branch exist.")
+            repo_name = self.gitHandler._repo_name_from_repo_origin(repo_origin)
+            repo_location = self.gitHandler.git_clone(repo_origin, repo_branch)
+            self.logger.info(f"Repository {repo_name} cloned to {repo_location}")
+            return repo_location, repo_name
+        else:
+            self.logger.error("Remote and branch do not exist.")
+            return None
+        
+    def add_repository(self, repo_origin, repo_branch, repo_location, repo_name):
+        last_commit_msg, last_commit_hash = self.gitHandler.get_last_commit_info(repo_location)
+        self.logger.debug(f"Last commit message: {last_commit_msg}, Last commit hash: {last_commit_hash}")
+        magik_hash, success = self.databaseManager.add_repository(repo_name=repo_name,repo_origin=repo_origin, repo_branch=repo_branch,\
+            added_by="test_user", repo_location=repo_location,\
+            last_commit_msg=last_commit_msg, last_commit_short_hash=last_commit_hash)
+        self.magik_hash = magik_hash
+        if success == False:
+            self.logger.error("Error adding repository")
+            return None
+        self.logger.info(f"Repository added with magik hash: {magik_hash}")
+        return magik_hash
+
+    def analyze_repo(self, repo_location, magik_hash):
+        self.depenAnalyzer = PythonDepandaAnalyzer()
+        self.astAnalyzer = PythonASTAnalyzer()
+        self.flowAnalyzer = PythonDataFlow()
+        self.logger.info(f"Repo analyzer initialized for {repo_location}")
+        code_file_list = self.fileManager.list_code_files(repo_location)
+        self.logger.debug(f"Code files found: {code_file_list}")
+        requirements_file_list = self.fileManager.find_requirements_file(repo_location)
+        self.logger.debug(f"Requirements files found: {requirements_file_list}")
+        dependencies_found = self._analyze_requirements(requirements_file_list)
+        vuln_dependeincies = self.vulnCodeSearch.check_dependencies_vulnerabilities(dependencies_found, pkg_type="pypi")
+        self.databaseManager.add_dependencies(dependencies_json=dumps(dependencies_found),\
+            dependencies_cve_vuln_found_json=dumps(vuln_dependeincies),\
+            magik_hash=magik_hash)
+        for code_file in code_file_list:
+            self.logger.info(f"Analyzing code file: {code_file}")
+            with open(code_file) as f:
+                content = f.read()
+                f.close()
+            if len(content) < 1000:
+                continue
+            else:
+                secrets_found = self.secretFinder.find_secrets(code_file)
+                sec_json, bp_json, data_flow, cfg_image_location, owap_top_10_highlights = self._analyze_code(content, self.openai_model)
+                self.databaseManager.add_information(file_name=code_file, dataflow_json=dumps(data_flow),\
+                    owasp_top10_json=dumps(owap_top_10_highlights),\
+                    ai_bp_recommendations_json=bp_json, ai_security_recommendations_json=sec_json,\
+                    cfg_image_relative_location=cfg_image_location, secrets_found_json=dumps(secrets_found), magik_hash=magik_hash)
+                self.logger.info(f"Code file {code_file} analyzed and added to database")
     
-    # Assuming each entry in 'informationMap' corresponds to a row from your table structure
-    entry = informationMap[rowint]
-    file_location = entry[1]
-    try:
-        with open(file_location, 'r') as file:
-            lines = file.readlines()
-            # Determine the number of digits in the last line number to adjust spacing
-            max_line_number_length = len(str(len(lines)))
-            file_content = ""
-            for i, line in enumerate(lines, start=1):
-                # Generate line number with consistent spacing
-                line_number = f"{i}".rjust(max_line_number_length)
-                # Concatenate the line number and line content
-                file_content += f"{line_number}: {line}"
-    except Exception as e:
-        logger.error(f"Error opening file: {str(e)}")
+    def _analyze_requirements(self, requirements_file_list):
+        for req_file in requirements_file_list:
+            with open(req_file) as f:
+                content = f.read()
+                f.close()
+            depenencies = self.depenAnalyzer.analyze(content=content)
+            self.logger.info(f"Dependencies at {req_file} last analyzed: {depenencies}")
+        return self.depenAnalyzer.dependencies        
     
-    recommendations = loads(entry[4])["recommendations"]
-    security_issues = loads(entry[5])["issues"]
-    combined_issues = []
-
-    # Adding recommendations to the combined list
-    for rec in recommendations:
-        start_line = ''.join(c for c in rec.get("lines").replace(" ","").split("-")[0] if c.isdigit())
-        combined_issues.append({
-            "Type": "Recommendation",  # Assuming you want to include the type for consistency
-            "sort_line": start_line,
-            "issueTitle": rec.get("issueTitle"),
-            "issue": rec.get("issue"),  # Assuming you want to include the issue description for consistency
-            "lines": rec.get("line"),
-            "recommendation": rec.get("recommendation")
-        })
-
-    # Adding security issues to the combined list
-    for issue in security_issues:
-        # Assuming we want to use the start line of the range for sorting
-        start_line = ''.join(c for c in issue.get("lines").replace(" ","").split("-")[0] if c.isdigit())
-        logger.debug(f"Start line: {start_line}")
-        cwe_num = issue.get("CWE").split("-")[1]
-        combined_issues.append({
-            "Type": "SecurityIssue",  # Assuming you want to include the type for consistency
-            "sort_line": start_line,
-            "issueTitle": issue.get("issueTitle"),
-            "issue": issue.get("issue"),  # Assuming you want to include the issue description for consistency
-            "lines": issue.get("lines"),  # Assuming you want to include the line range for consistency
-            "CWE": issue.get("CWE"),
-            "cwe_link": f"https://cwe.mitre.org/data/definitions/{cwe_num}.html",  # Assuming you want to include a link to the CWE definition
-            "suggestedFix": issue.get("fix"),
-            "impact": issue.get("impact")
-        })
-
-    # Sort combined list by starting line number
-    combined_issues_sorted = sorted(combined_issues, key=lambda x: int(x["sort_line"]))
-
-    # Convert the sorted list back to JSON if necessary
-    sorted_issues_json = dumps(combined_issues_sorted, indent=2)
-    
-    flow_picture_url = entry[6]
-    
-    # Parse the timeline JSON into a list of events
-    timeline_json = loads(entry[2])
-    timeline = []
-    for variable, details in timeline_json.items():
-        for event in details['time_line']:
-            timeline.append({'line': event[0], 'node_name': variable, 'action': event[2]})
-    
-    # Sort the timeline by line number
-    timeline = sorted(timeline, key=lambda x: x['line'])
-    
-    # Since the loop will overwrite the variables, ensure to adjust logic if multiple entries are expected
-
-    return render_template("analysis_result.html", file_content=file_content, ai_response_json=sorted_issues_json,\
-        flow_picture_url=flow_picture_url, timeline=timeline, magik_hash=magik_hash, row=row)
-
-
-def perform_code_sequence(repo_origin, repo_branch):
-        git_handler = GitHandler("/elfowl/data/downloads")
-        file_manager = FileManager()
-        ast_analyzer = PythonASTAnalyzer()
-        depen_analyzer = PythonDepandaAnalyzer()
-        flow_analyzer = PythonDataFlow()
-        cfg_analyzer = CodeCFGAnalyzer()
-        depen_vuln_search = VulnerableCodeSearch(ip="nginx", lib_type="pypi")
-        model = "gpt-3.5-turbo-1106"
-        openai_client = OpenAIClient(api_key=apikey, organization=orgid)
-        db_manager.create_tables()
-        branches = git_handler.get_remote_branches(repo_origin)
-        print(branches)
-        if git_handler.confirm_remote_and_branch_exist(repo_origin, repo_branch):
-            print("Remote and branch exist.")
-            git_handler.git_clone(repo_origin, repo_branch)
-            repo_name = git_handler._repo_name_from_repo_origin(repo_origin)
-            print(repo_name)
-            repo_location = git_handler._directory_path_from_repo_origin(repo_origin, repo_branch)
-            secret_finder = SecretFinder(config_file='truffles_config.yml', repo_location=repo_location)
-            secrets_found = secret_finder.find_secrets()
-            last_commit_msg, last_commit_hash = git_handler.get_last_commit_info(repo_location)
-            print(last_commit_msg, last_commit_hash)
-            magik_hash, success = db_manager.add_repository(repo_name=repo_name,repo_origin=repo_origin, repo_branch=repo_branch,\
-                added_by="test_user", repo_location=repo_location,\
-                last_commit_msg=last_commit_msg, last_commit_short_hash=last_commit_hash)
-            if success == False:
-                print("Error adding repository")
-                exit()
-            print(magik_hash)
-            code_file_list = file_manager.list_code_files(repo_location)
-            requirements_file = file_manager.find_requirements_file(repo_location)
-            requirements_file = requirements_file.split("\n")
-            if type(requirements_file) == str:
-                requirements_file = [requirements_file]
-            for req_file in requirements_file:
-                with open(req_file) as f:
-                    content = f.read()
-                    f.close()
-                depen_analyzer.analyze(content=content)
-            if code_file_list:
-                for code_file in code_file_list:
-                    with open(code_file) as f:
-                        content = f.read()
-                        f.close()
-                    ## if content is smaller than 1000 characters, skip the analysis
-                    if len(content) < 2000:
-                        continue
-                    owasp_reco = ast_analyzer.analyze(code=content)
-                    variable_flow = flow_analyzer.analyze(code=content)
-                    cfg_image_location = cfg_analyzer.generate_cfg(code=content)
-                    sec_json, total_tokens = openai_client.generate_response(
-                        task_type="security",
-                        model=model,
-                        temperature=0,
-                        frequency_penalty=0,
-                        presence_penalty=0,
-                        code_context=content,
-                        assistant_context=owasp_reco
-                    )
-                    bp_json, total_tokens = openai_client.generate_response(
-                        task_type="best_practices",
-                        model=model,
-                        temperature=0,
-                        frequency_penalty=0,
-                        presence_penalty=0,
-                        code_context=content
-                    )
-                    db_manager.add_information(file_name=code_file, dataflow_json=dumps(variable_flow), owasp_top10_json=dumps(owasp_reco), ai_bp_recommendations_json=bp_json,\
-                        ai_security_recommendations_json=sec_json, cfg_image_relative_location=cfg_image_location, magik_hash=magik_hash)
-                db_manager.add_dependencies(dependencies_json=dumps(depen_analyzer.dependencies),\
-                    dependencies_cve_vuln_found_json=dumps(depen_vuln_search.check_dependencies_vulnerabilities(depen_analyzer.dependencies)),\
-                    magik_hash=magik_hash)
-                
-                db_manager.add_secrets_found(secrets_found_json=dumps(secrets_found), magik_hash=magik_hash)
-        # delete the database and clean up
-        print(f"rm -rf ./data/downloads/* && rm -rf ./data/database/git_handler_test.sqlite && rm -rf ./data/images/*")
-
+    def _analyze_code(self, content, model):
+        try:
+            owap_top_10_highlights = self.astAnalyzer.analyze(code=content)
+            data_flow = self.flowAnalyzer.analyze(code=content)
+            cfg_image_location = self.cfgAnalyzer.generate_cfg(code=content)
+            sec_json, bp_json = self._ask_openai(content, model, owap_top_10_highlights)
+            return sec_json, bp_json, data_flow, cfg_image_location, owap_top_10_highlights
+        except Exception as e:
+            self.logger.error(f"Error analyzing code: {e}")
+            return None, None, None, None
+            
+    def _ask_openai(self, content, model, owasp_recos):
+        sec_json, total_tokens = self.openaiClient.generate_response(
+            task_type="security",
+            model=model,
+            temperature=0,
+            frequency_penalty=0,
+            presence_penalty=0,
+            code_context=content,
+            assistant_context=owasp_recos
+        )
+        bp_json, total_tokens = self.openaiClient.generate_response(
+            task_type="best_practices",
+            model=model,
+            temperature=0,
+            frequency_penalty=0,
+            presence_penalty=0,
+            code_context=content
+        )
+        return sec_json, bp_json
+            
+    def cleanup(self):
+        self.fileManager.remove_directory(f"{self.repo_locations}/{self.magik_hash}/*")
+        self.logger.info(f"Removed {self.repo_locations}/{self.magik_hash}/*")
+        self.fileManager.remove_directory(f"{self.image_store_location}/*")
+        self.logger.info(f"Removed all images from {self.image_store_location}/*")
+        self.fileManager.remove_file(f"{db_location}")
+        self.logger.info(f"Removed database {db_location}")
 
 if __name__ == "__main__":
+    from test_secrets import apikey, orgid
     logging.basicConfig(level=logging.DEBUG)
-    app.run(debug=True, host='0.0.0.0', port=8888)
+    db_location = "/elfowl/data/database/test.sqlite"
+    repo_locations = "/elfowl/data/downloads"
+    image_store_location = "/elfowl/data/images"
+    openai_model = "gpt-3.5-turbo-1106"
+    test_dash = runDashboard(db_location, repo_locations, image_store_location, openai_model=openai_model,\
+        api_key=apikey, org_id=orgid, vuln_code_host="nginx", truffles_config_file="/elfowl/truffles_config.yml")
+    try:
+        test_dash.setup_tables()
+        test_repo = "https://github.com/videvelopers/Vulnerable-Flask-App"
+        test_branch = "main"
+        test_dash.new_repo_sequence(test_repo, test_branch)
+        if input("Cleanup? (y/n): ") == "y":
+            test_dash.cleanup()
+    except Exception as e:
+        print(f"Error: {e}")
+        test_dash.cleanup()
+        exit()
