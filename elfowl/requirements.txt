@@ -10,3 +10,4 @@ langchain==0.1.9
 backoff==2.2.1
 ply==3.11
 py2cfg==0.7.3
+django==5.0.3

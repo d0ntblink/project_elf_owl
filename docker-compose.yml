@@ -41,11 +41,11 @@ services:
 
   elfowl:
     build: ./elfowl
-    command: /bin/bash -c "cd /elfowl/ && python main.py"
+    command: /bin/bash -c "python manage.py runserver 0.0.0.0:8000"
     env_file:
       - docker.env
     ports:
-      - 8888:8888
+      - 8000:8000
     volumes:
       - ./elfowl/:/elfowl/
       # - data:/elfowl/data

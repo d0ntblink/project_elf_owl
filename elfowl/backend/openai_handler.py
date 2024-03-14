@@ -68,17 +68,16 @@ class OpenAIClient:
         Scrutinize each line and larger code constructs for security flaws. Predict flaws that can be exploited by attackers. Indicate the start and end line numbers for the identified issue. This format accommodates both single-line issues and those spanning multiple lines.
         When a vulnerability is found, include its CWE. Contextualize how the issue might affect larger segments of the code.
         Example Response in JSON format:
-        issues: [
-            {{
-                issueTitle: "Descriptive title of the issue",
-                issue: "The code directly concatenates user input into the `subprocess.check_output` command, making it vulnerable to command injection attacks.",
-                fix: "Use `subprocess.run` with the `shell` parameter set to `True` to prevent command injection.",
-                lines: 45-53,
-                CWE: "CWE-78",
-                impact: "Attackers can execute arbitrary commands on the server, leading to unauthorized access, data manipulation, and potential system compromise."
-            }},
-            // Additional issues can be concatenates in a similar format
-        ]
+        {{
+            "issues": [{{
+                "issueTitle": "Descriptive title of the issue",
+                "issue": "The code directly concatenates user input into the `subprocess.check_output` command, making it vulnerable to command injection attacks.",
+                "fix": "Use `subprocess.run` with the `shell` parameter set to `True` to prevent command injection.",
+                "lines": "45 - 53",
+                "CWE": "CWE-78",
+                "impact": "Attackers can execute arbitrary commands on the server, leading to unauthorized access, data manipulation, and potential system compromise."
+            }}]
+        }}
         #### Code:
         {context_list[0]}
         """
@@ -106,15 +105,14 @@ class OpenAIClient:
         Scrutinize each line and larger code constructs for compliance with industry best practices, particularly in areas like error handling, input validation.
         Critically analyze the code for potential bugs or edge cases and suggest how to address them.
         Example Response in JSON format:
-        recommendations: [
-            {{
-                issueTitle: "Avoid the use of digits in variable names.",
-                issue: "Single-letter variable names like `v` are not descriptive and can lead to confusion. Use meaningful variable names to improve code readability.",
-                lines: 53-59,
-                recommendation: "change the variable name from `var1` to `user_input_varible`."
-            }},
-            // Additional recommendation can be concatenated in a similar format
-        ]
+        {{
+            "recommendations": [{{
+                "issueTitle": "Avoid the use of digits in variable names.",
+                "issue": "Single-letter variable names like `v` are not descriptive and can lead to confusion. Use meaningful variable names to improve code readability.",
+                "lines": "53 - 59",
+                "recommendation": "change the variable name from `var1` to `user_input_varible`."
+            }}]
+        }}
         #### Code:
         {context}
         """

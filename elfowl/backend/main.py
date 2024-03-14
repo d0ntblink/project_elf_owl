@@ -112,7 +112,7 @@ def analysis_result(magik_hash, row):
 
     # Adding recommendations to the combined list
     for rec in recommendations:
-        start_line = ''.join(c for c in rec.get("lines").split("-")[0] if c.isdigit())
+        start_line = ''.join(c for c in rec.get("lines").replace(" ","").split("-")[0] if c.isdigit())
         combined_issues.append({
             "Type": "Recommendation",  # Assuming you want to include the type for consistency
             "sort_line": start_line,
@@ -125,7 +125,7 @@ def analysis_result(magik_hash, row):
     # Adding security issues to the combined list
     for issue in security_issues:
         # Assuming we want to use the start line of the range for sorting
-        start_line = ''.join(c for c in issue.get("lines").split("-")[0] if c.isdigit())
+        start_line = ''.join(c for c in issue.get("lines").replace(" ","").split("-")[0] if c.isdigit())
         logger.debug(f"Start line: {start_line}")
         cwe_num = issue.get("CWE").split("-")[1]
         combined_issues.append({
@@ -210,7 +210,7 @@ def perform_code_sequence(repo_origin, repo_branch):
                         content = f.read()
                         f.close()
                     ## if content is smaller than 1000 characters, skip the analysis
-                    if len(content) < 1000:
+                    if len(content) < 2000:
                         continue
                     owasp_reco = ast_analyzer.analyze(code=content)
                     variable_flow = flow_analyzer.analyze(code=content)

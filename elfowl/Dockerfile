@@ -27,17 +27,19 @@ RUN set -exu \
     && curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
 
 # Set build arguments
-ARG APP_DIR=/application
-ARG APP_GROUP=birdwatcher
+ARG APP_DIR=/elfowl/
+ARG APP_GROUP=elfowl
 ARG APP_ENV=/opt/venv
-ARG HF_HOME=/application/models
+ARG HF_HOME=/elfowl/models
+ARG PYTHUNUNBUFFERED=1
 
 # Set environment variables
 ENV APP_AUTO_UPDATE_APP=false \
     APP_DIR="$APP_DIR" \
     APP_ENV="$APP_ENV" \
     APP_GROUP="$APP_GROUP" \ 
-    HF_HOME="$HF_HOME"
+    HF_HOME="$HF_HOME" \
+    PYTHONUNBUFFERED="$PYTHUNUNBUFFERED"
 
 # Create application directory
 RUN set -exu \
