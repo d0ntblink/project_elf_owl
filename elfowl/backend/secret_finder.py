@@ -74,7 +74,4 @@ class SecretFinder:
         return refined_secrets
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    secret_finder = SecretFinder(config_file='truffles_config.yml', repo_location='.')
-    secrets = secret_finder.find_secrets()
-    print(secrets)
+    pass

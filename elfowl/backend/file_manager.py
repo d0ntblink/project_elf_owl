@@ -83,7 +83,4 @@ class FileManager:
             return False    
 
 if __name__ == "__main__":
-    file_manager = FileManager()
-    files = "/elfowl"
-    print(file_manager.list_code_files(files))
-    print(file_manager.find_requirements_file(files))
+    pass

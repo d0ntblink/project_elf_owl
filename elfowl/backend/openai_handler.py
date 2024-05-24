@@ -11,8 +11,9 @@ class OpenAIClient:
         """
         Initializes the OpenAI client with API key and organization information.
 
-        :param api_key: The API key for OpenAI.
-        :param org_id: The organization ID for OpenAI.
+        Args:
+            api_key (str): The API key for OpenAI.
+            org_id (str): The organization ID for OpenAI.
         """
         self.logger = logging.getLogger('OpenAIClient')
         self.client = OpenAI(api_key=api_key, organization=org_id)
@@ -22,14 +23,17 @@ class OpenAIClient:
         """
         Generates a response from OpenAI based on the task type.
 
-        :param task_type: The type of task (e.g., 'security', 'best_practices').
-        :param model: The OpenAI model to be used for generating the response.
-        :param temperature: The temperature setting for the AI model.
-        :param frequency_penalty: The frequency penalty setting for the AI model.
-        :param presence_penalty: The presence penalty setting for the AI model.
-        :param code_context: The code context or content for the analysis.
-        :param assistant_context: Additional context for the assistant, if any.
-        :return: A tuple containing the response message and the total number of tokens used.
+        Args:
+            task_type (str): The type of task (e.g., 'security', 'best_practices').
+            model (str): The OpenAI model to be used for generating the response.
+            temperature (int): The temperature setting for the AI model.
+            frequency_penalty (int): The frequency penalty setting for the AI model.
+            presence_penalty (int): The presence penalty setting for the AI model.
+            code_context (str): The code context or content for the analysis.
+            assistant_context (str, optional): Additional context for the assistant, if any.
+
+        Returns:
+            tuple: A tuple containing the response message and the total number of tokens used.
         """
         self.logger.debug(f"Generating {task_type} response from OpenAI")
         if task_type == "security":
@@ -59,8 +63,11 @@ class OpenAIClient:
         """
         Constructs a security prompt for OpenAI based on the provided context.
 
-        :param context_list: A list containing code context and assistant context.
-        :return: A list of messages formatted for the OpenAI API.
+        Args:
+            context_list (list): A list containing code context and assistant context.
+
+        Returns:
+            list: A list of messages formatted for the OpenAI API.
         """
         security_prompt = f"""
         3 security experts are discussing code with a panel discussion, trying to analyze it line by line, and make sure the result is correct and avoid penalty:
@@ -96,8 +103,11 @@ class OpenAIClient:
         """
         Constructs a best practices prompt for OpenAI based on the provided code context.
 
-        :param context: The code context for the analysis.
-        :return: A list of messages formatted for the OpenAI API.
+        Args:
+            context (str): The code context for the analysis.
+
+        Returns:
+            list: A list of messages formatted for the OpenAI API.
         """
         habit_prompt = f"""
         3 software engineering experts are discussing code with a panel discussion, trying to analyze it line by line, and make sure the result is correct and avoid penalty:
@@ -124,9 +134,12 @@ class OpenAIClient:
         """
         Counts the number of tokens in a message based on a specific model's encoding.
 
-        :param model: The OpenAI model to be used.
-        :param messages: The messages for which to count tokens.
-        :return: The total number of tokens.
+        Args:
+            model (str): The OpenAI model to be used.
+            messages (list): The messages for which to count tokens.
+
+        Returns:
+            int: The total number of tokens.
         """
         self.logger.debug(f"Counting token for {model}")
         try:
@@ -151,40 +164,4 @@ class OpenAIClient:
 
 
 if __name__ == "__main__":
-    from secrets import api_key, organization
-    from code_analyzer import PythonASTAnalyzer
-
-    model = "gpt-3.5-turbo-1106"
-    with open("./examples/Vulnerable-Flask-App/vulnerable-flask-app.py") as f:
-        content = f.read()
-        f.close()
-    
-    debug_level = logging.ERROR
-    openai_client = OpenAIClient(api_key, organization)
-    logging.getLogger('OpenAIClient').setLevel(debug_level)
-
-    ast_analyzer = PythonASTAnalyzer(content)
-    vulnerabilities_ast = ast_analyzer.analyze()
-
-    response, total_tokens = openai_client.generate_response(
-        task_type="security",
-        model=model,
-        temperature=0,
-        frequency_penalty=0,
-        presence_penalty=0,
-        code_context=content,
-        assistant_context=vulnerabilities_ast
-    )
-    print(response)
-    print(total_tokens)
-
-    response, total_tokens = openai_client.generate_response(
-        task_type="best_practices",
-        model=model,
-        temperature=0,
-        frequency_penalty=0,
-        presence_penalty=0,
-        code_context=content
-    )
-    print(response)
-    print(total_tokens)
+    pass

@@ -169,17 +169,4 @@ class VulnerableCodeSearch:
                 
 
 if __name__ == "__main__":
-    # Example usage:
-    from code_analyzer import PythonDepandaAnalyzer
-    logging.basicConfig(level=logging.DEBUG)
-    analyzer = PythonDepandaAnalyzer()
-    with open("/example/requirements.txt") as f:
-        text = f.read()
-        f.close()
-    analyzer.analyze(content=text)
-    input_dict = analyzer.dependencies
-    search_instance = VulnerableCodeSearch("nginx", "pypi")
-    vulnerable_apps = search_instance.check_dependencies_vulnerabilities(input_dict)
-    print("Vulnerable applications and their vulnerabilities:")
-    print(vulnerable_apps)
-    print(len(input_dict),len(vulnerable_apps))
+    pass

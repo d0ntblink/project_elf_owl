@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>elfowl SAST Suite</title>
+    {% load static %}
+    {% comment %} {% load visualizer %} {% endcomment %}
+    <link rel="stylesheet" href="{% static 'styles/main.css' %}">
+</head>
+<body>
+    <header>
+        <img class="logo" src="{% static 'images/elfowl-logo.png' %}" alt="elfowl-logo">
+        <a href="{% url 'index' %}" style="float: right;">Documentation</a>
+        <h1>elfowl SAST Suite</h1>
+    </header>
+    <main>
+        {% for file in file_information %}
+        <div>
+            <a>{{ file.dataflow_json }}</a>
+            <a>{{ file.owasp_top10_json }}</a>
+            <a>{{ file.ai_bp_recommendations_json }}</a>
+            <a>{{ file.ai_security_recommendations_json }}</a>
+            <img src="{{ file.cfg_image_relative_location }}" alt="cfg_image">
+            <a>{{ file.secrets_found_json }}</a>
+        </div>
+        {% endfor %}
+    </main>
+    <footer>
+        <p>&copy;2024 d0ntblink</p>
+    </footer>
+</body>
+</html>

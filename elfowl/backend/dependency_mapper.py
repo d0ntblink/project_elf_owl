@@ -2,7 +2,7 @@ import logging
 import requests
 import time
 from packaging.requirements import Requirement
-from thread_handler import ThreadManager
+from backend import thread_handler
 
 
 class PythonDepandaAnalyzer:
@@ -17,7 +17,7 @@ class PythonDepandaAnalyzer:
         """
         
         self.logger = logging.getLogger("PythonDepandaAnalyzer")
-        self.thread_manager = ThreadManager()
+        self.thread_manager = thread_handler.ThreadManager()
         self.checked_dependencies = []
         self.dependencies = {}
         self.logger.info("PythonDepandaAnalyzer initialized")
@@ -155,15 +155,4 @@ class PythonDepandaAnalyzer:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    analyzer = PythonDepandaAnalyzer()
-    with open("./test_requirement") as f:
-        content = f.read()
-        f.close()
-    # calculate time taken to analyze the file
-    current_time = time.time()
-    dependencies = analyzer.analyze(content)
-    print(f"Time taken to analyze: {time.time() - current_time}")
-    print(dependencies)
-    print(analyzer.checked_dependencies)
-    print(analyzer.dependencies)
+    pass

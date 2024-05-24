@@ -11,9 +11,19 @@
 <header>
     <img class=logo src="{% static 'images/elfowl-logo.png' %}" alt="elfowl-logo">
     <p href="{% url 'index' %}" style="float: right;">Documentation</p>
-    <h1>elfowl SAST Suite</h1>
+    {% comment %} title links back to index {% endcomment %}
+    <h1 href="{% url 'index' %}" >elfowl SAST Suite</h1>
 </header>
 <body>
+    <h1>MONITOR A NEW REPOSITORY</h1>
+    <form method="post">
+        {% csrf_token %}
+        <label for="input_repo_remote">Git Link to The Repository</label><br>
+        <input type="text" id="input_repo_remote" name="input_repo_remote"><br>
+        <label for="input_repo_branch">Branch Name</label><br>
+        <input type="text" id="input_repo_branch" name="input_repo_branch"><br><br>
+        <button type="submit">Submit</button>
+    </form>
 </body>
 <footer>
     <p>&copy;2024 d0ntblink</p>

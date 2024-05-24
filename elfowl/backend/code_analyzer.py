@@ -419,6 +419,12 @@ class PythonDataFlow:
     """
     Analyzes the data flow of variables in a Python code snippet.
     It tracks the creation, modification, and usage of variables, especially focusing on user inputs.
+
+    Args:
+        code (str): Python source code as a string.
+
+    Returns:
+        dict: A dictionary of variables with their attributes like type, user input influence, etc.
     """
     def __init__(self):
         """
@@ -430,8 +436,11 @@ class PythonDataFlow:
         """
         Conducts the data flow analysis by tracking variables and their usage.
 
-        :param code: Python source code as a string.
-        :return: A dictionary of variables with their attributes like type, user input influence, etc.
+        Args:
+            code (str): Python source code as a string.
+
+        Returns:
+            dict: A dictionary of variables with their attributes like type, user input influence, etc.
         """
         self.logger.info("Starting data flow analysis...")
         self.variables_in_flow = {}
@@ -441,6 +450,9 @@ class PythonDataFlow:
         return self.variables_in_flow
 
     def find_variables(self):
+        """
+        Discovers variables in the code and tracks their usage.
+        """
         self.logger.info("Starting variable discovery...")
         tree = ast.parse(self.code)
         current_function = None  # Track the current function name
@@ -465,6 +477,16 @@ class PythonDataFlow:
         self.logger.info("Variable discovery completed.")
 
     def _variable_entry(self, name, type, lineno, function, user_input):
+        """
+        Adds a variable entry to the variables_in_flow dictionary.
+
+        Args:
+            name (str): The name of the variable.
+            type (str): The type of the variable.
+            lineno (int): The line number where the variable is assigned.
+            function (str): The name of the function where the variable is assigned.
+            user_input (bool): Indicates if the variable is influenced by user input.
+        """
         if name not in self.variables_in_flow:
             self.logger.debug(f"New variable discovered: {name}.")
             self.variables_in_flow[name] = {
@@ -477,6 +499,16 @@ class PythonDataFlow:
             self._repeating_variable(name, type, lineno, function, user_input)
 
     def _repeating_variable(self, name, type, lineno, function, user_input):
+        """
+        Updates a variable entry in the variables_in_flow dictionary when the variable is modified.
+
+        Args:
+            name (str): The name of the variable.
+            type (str): The type of the variable.
+            lineno (int): The line number where the variable is modified.
+            function (str): The name of the function where the variable is modified.
+            user_input (bool): Indicates if the variable is influenced by user input.
+        """
         self.logger.debug(f"Variable {name} has been modified.")
         # Update timeline
         self.variables_in_flow[name]["time_line"].append((lineno, function, "modified"))
@@ -487,6 +519,13 @@ class PythonDataFlow:
     def _check_user_input(self, value_node, current_function):
         """
         Check if the value_node represents a user input from common sources.
+
+        Args:
+            value_node (ast.Node): The value node to check.
+            current_function (str): The name of the current function.
+
+        Returns:
+            bool: True if the value_node represents user input, False otherwise.
         """
         if isinstance(value_node, ast.Call):
             if hasattr(value_node.func, 'id') and value_node.func.id in ['input', 'get']:
@@ -548,6 +587,9 @@ class CodeCFGAnalyzer:
     def __init__(self, save_image_location):
         """
         Initializes the CFG analyzer with Python code.
+
+        Args:
+            save_image_location (str): The directory to save the CFG image.
         """
         self.logger = logging.getLogger(__name__)
         self.save_image_location = save_image_location
@@ -556,8 +598,11 @@ class CodeCFGAnalyzer:
         """
         Generates a CFG from the code and saves it as a PNG image.
 
-        :param code: Python source code as a string.
-        :return: The filename of the generated CFG image.
+        Args:
+            code (str): Python source code as a string.
+
+        Returns:
+            str: The filename of the generated CFG image.
         """
         self.code = code
         cfg = CFGBuilder().build_from_src('code_analysis', self.code)
@@ -570,33 +615,11 @@ class CodeCFGAnalyzer:
         """
         Generates a SHA256 hash of the code to create a unique filename for the CFG.
 
-        :return: A SHA256 hash string.
+        Returns:
+            str: A SHA256 hash string.
         """
         return hashlib.sha256(self.code.encode('utf-8')).hexdigest()
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    with open("./examples/Vulnerable-Flask-App/vulnerable-flask-app.py", "r") as f:
-        content = f.read()
-        f.close()
-    with open("./examples/Vulnerable-Flask-App/requirements.txt", "r") as f:
-        requirements = f.readlines()
-        f.close()
-    ast_analyzer = PythonASTAnalyzer()
-    highlights = ast_analyzer.analyze(code=content)
-    dep_analyzer = PythonDepandaAnalyzer()
-    dep_analyzer.analyze(requirements, "requirements")
-    dep_analyzer.analyze(content, "code")
-    dependecies = dep_analyzer.dependencies
-    data_flow = PythonDataFlow()
-    var_flow = data_flow.analyze(code=content)
-    cfg_analyzer = CodeCFGAnalyzer()
-    cfg_image = cfg_analyzer.generate_cfg(code=content)
-    print("AST Analysis Results:")
-    print(highlights)
-    print("\nDependencies And Transitive Dependencies:")
-    print(dependecies)
-    print("\nData Flow Analysis:")
-    print(var_flow)
-    print("\nCFG Image:", cfg_image)
+    pass

@@ -3,47 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Code Analysis Dashboard</title>
+    <title>elfowl SAST Suite</title>
+    {% load static %}
+    {% comment %} {% load visualizer %} {% endcomment %}
+    <link rel="stylesheet" href="{% static 'styles/main.css' %}">
 </head>
+<header>
+    <img class=logo src="{% static 'images/elfowl-logo.png' %}" alt="elfowl-logo">
+    <p href="{% url 'index' %}" style="float: right;">Documentation</p>
+    <h1>elfowl SAST Suite</h1>
+</header>
 <body>
-    <h1>Code Analysis Dashboard</h1>
-
-    <!-- Display any message -->
-    {% if message %}
-        <p>{{ message }}</p>
-    {% endif %}
-
-    <!-- Repository Submission Form -->
-    <section>
-        <h2>Analyze a Repository</h2>
-        <form action="/" method="POST">
-            <label for="repo_origin">Repository Origin:</label>
-            <input type="text" id="repo_origin" name="repo_origin" required placeholder="https://github.com/user/repo">
-            
-            <label for="repo_branch">Branch:</label>
-            <input type="text" id="repo_branch" name="repo_branch" required placeholder="main">
-            
-            <button type="submit">Analyze</button>
-        </form>
-    </section>
-    <!-- Additional instructions or information can go here -->
-    <sectiorn>
-        <h2>Analysed Repositories</h2>
-        {% for repo in repositories %}
-        <p>
-            <li><a href="/result/{{ repo[11] }}">{{ repo[0] }} - {{ repo[1] }} @ {{repo[3]}}</a></li>
-            <li>Origin: {{ repo[2]}}</li>
-            <li>Added by {{ repo[5]}} On {{ repo[6]}}</li>
-            <li>Last Updated by {{ repo[7]}} on {{ repo[8] }}</li>
-            <li>Commit message: {{ repo[9] }}</li>
-            <li>Commit hash: {{ repo[10] }}</li>
-        </p>
+    <div class=navbox>
+        <a>Navigation</a><br>
+        <a href="{% url 'index' %}">HOME</a><br>
+        <a href="{% url 'add_repo' %}">MONITOR A NEW REPOSITORY</a><br>
+        <a href="{% url 'settings' %}">SETTINGS</a>
+        {% comment %} <a href="{% url 'admin' %}">ADMIN/a> {% endcomment %}
+    </div>
+    <div class=linksbox>
+        <a>Project Links</a><br>
+        <a href="linkedin.com/in/elfowl">LinkedIn</a><br>
+        <a href="github.com/elfowl">GitHub</a><br>
+        <a href="twitter.com/elfowl">Twitter</a>
+    </div>
+    <ul>
+        {% for repository in repositories %}
+            <div class=repobox>
+                <a href="{% url 'report' repository.magik_hash %}">{{ repository.repo_name }}</a>
+                {{ repository.repo_origin }}
+                last synced on: {{ repository.last_synced_on }}
+                added by: {{ repository.added_by }}
+            </div>
         {% endfor %}
-    </sectiorn>
-    <!-- Settings Link -->
-    <section>
-        <h2>Settings</h2>
-        <p>Configure API keys and preferences <a href="/settings">here</a>.</p>
-    </section>
+    </ul>
 </body>
+<footer>
+    <p>&copy;2024 d0ntblink</p>
+</footer>
 </html>

@@ -8,14 +8,21 @@ class DatabaseManager:
     A class to manage interactions with a SQLite database, providing functionalities
     to create tables, add and sync repository data, add information, and retrieve specific fields.
     """
-    def __init__(self, db_file):
+
+    def __init__(self, db_file, repositry_table_name="Repository",
+                 information_map_table_name="InformationMap",
+                 dependencies_map_table_name="DependenciesMap"):
         """
         Initializes the DatabaseManager with a specific SQLite database file.
 
-        :param db_file: Path to the SQLite database file.
+        Args:
+            db_file (str): Path to the SQLite database file.
         """
         self.logger = logging.getLogger(__name__)
         self.db_file = db_file
+        self.repositry_table_name = repositry_table_name
+        self.information_map_table_name = information_map_table_name
+        self.dependencies_map_table_name = dependencies_map_table_name
 
     def create_tables(self):
         """
@@ -25,8 +32,8 @@ class DatabaseManager:
             conn = sqlite3.connect(self.db_file)
             cursor = conn.cursor()
             # Create Repository Table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS Repository (
+            cursor.execute(f'''
+                CREATE TABLE IF NOT EXISTS {self.repositry_table_name} (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     repo_name TEXT NOT NULL,
                     repo_origin TEXT NOT NULL,
@@ -42,8 +49,8 @@ class DatabaseManager:
                 )
             ''')
             # Create Information Map Table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS InformationMap (
+            cursor.execute(f'''
+                CREATE TABLE IF NOT EXISTS {self.information_map_table_name} (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     file_name TEXT NOT NULL,
                     dataflow_json TEXT,
@@ -56,8 +63,8 @@ class DatabaseManager:
                 )
             ''')
             # Create Dependencies Map Table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS DependenciesMap (
+            cursor.execute(f'''
+                CREATE TABLE IF NOT EXISTS {self.dependencies_map_table_name} (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     dependencies_json TEXT,
                     dependencies_cve_vuln_found_json TEXT,
@@ -78,21 +85,25 @@ class DatabaseManager:
         """
         Adds a new repository record to the Repository table.
 
-        :param repo_name: Name of the repository.
-        :param repo_origin: Origin URL of the repository.
-        :param repo_branch: Branch of the repository.
-        :param repo_location: Location of the repository on the local file system.
-        :param added_by: User who added the repository.
-        :param last_commit_msg: Last commit message in the repository.
-        :param last_commit_short_hash: Short hash of the last commit.
+        Args:
+            repo_name (str): Name of the repository.
+            repo_origin (str): Origin URL of the repository.
+            repo_branch (str): Branch of the repository.
+            repo_location (str): Location of the repository on the local file system.
+            added_by (str): User who added the repository.
+            last_commit_msg (str): Last commit message in the repository.
+            last_commit_short_hash (str): Short hash of the last commit.
+
+        Returns:
+            Tuple[str, bool]: A tuple containing the magik hash and a boolean indicating the success of adding the repository.
         """
         try:
             magik_hash = self._generate_magik_hash(repo_name, repo_branch, last_commit_short_hash)
             date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             conn = sqlite3.connect(self.db_file)
             cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO Repository (repo_name, repo_origin, repo_branch, repo_location, added_by, added_on, last_synced_by, last_synced_on, last_commit_msg, last_commit_short_hash, magik_hash)
+            cursor.execute(f'''
+                INSERT INTO {self.repositry_table_name} (repo_name, repo_origin, repo_branch, repo_location, added_by, added_on, last_synced_by, last_synced_on, last_commit_msg, last_commit_short_hash, magik_hash)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (repo_name, repo_origin, repo_branch, repo_location, added_by, date_time, added_by, date_time, last_commit_msg, last_commit_short_hash, magik_hash))
             conn.commit()
@@ -109,16 +120,20 @@ class DatabaseManager:
         """
         Updates the synchronization details of a specific repository in the Repository table.
 
-        :param repo_name: Name of the repository.
-        :param repo_branch: Branch of the repository.
-        :param last_synced_by: User who performed the last synchronization.
-        :param last_commit_msg: Last commit message during the synchronization.
-        :param last_commit_short_hash: Short hash of the last commit during synchronization.
+        Args:
+            repo_name (str): Name of the repository.
+            repo_branch (str): Branch of the repository.
+            last_synced_by (str): User who performed the last synchronization.
+            last_commit_msg (str): Last commit message during the synchronization.
+            last_commit_short_hash (str): Short hash of the last commit during synchronization.
+
+        Returns:
+            Tuple[str, bool]: A tuple containing the magik hash and a boolean indicating the success of the synchronization.
         """
         try:
             magik_hash = self._generate_magik_hash(repo_name, repo_branch, last_commit_short_hash)
             date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            self._set_fields(table_name="Repository", set_clauses=["last_synced_by", "last_synced_on", "last_commit_msg", "last_commit_short_hash", "magik_hash"]\
+            self._set_fields(table_name=self.repositry_table_name, set_clauses=["last_synced_by", "last_synced_on", "last_commit_msg", "last_commit_short_hash", "magik_hash"]\
                 , set_values=[last_synced_by, date_time, last_commit_msg, last_commit_short_hash, magik_hash]\
                 , where_clauses=["repo_name", "repo_branch"], where_values=[repo_name, repo_branch])
             self.logger.info("Repository synced successfully.")
@@ -132,20 +147,24 @@ class DatabaseManager:
         """
         Adds a new information record to the InformationMap table.
 
-        :param file_name: Name of the file associated with the information.
-        :param dataflow_json: JSON string of data flow information.
-        :param owasp_top10_json: JSON string of OWASP Top 10 information.
-        :param ai_bp_recommendations_json: JSON string of AI best practices recommendations.
-        :param ai_security_recommendations_json: JSON string of AI security recommendations.
-        :param cfg_image_relative_location: Relative location of the CFG image.
-        :param secrets_found_json: JSON string of found secrets.
-        :param magik_hash: Magik hash associated with the information.
+        Args:
+            file_name (str): Name of the file associated with the information.
+            dataflow_json (str): JSON string of data flow information.
+            owasp_top10_json (str): JSON string of OWASP Top 10 information.
+            ai_bp_recommendations_json (str): JSON string of AI best practices recommendations.
+            ai_security_recommendations_json (str): JSON string of AI security recommendations.
+            cfg_image_relative_location (str): Relative location of the CFG image.
+            secrets_found_json (str): JSON string of found secrets.
+            magik_hash (str): Magik hash associated with the information.
+
+        Returns:
+            bool: True if the information is added successfully, False otherwise.
         """
         try:
             conn = sqlite3.connect(self.db_file)
             cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO InformationMap (file_name, dataflow_json, owasp_top10_json,
+            cursor.execute(f'''
+                INSERT INTO {self.information_map_table_name} (file_name, dataflow_json, owasp_top10_json,
                                            ai_bp_recommendations_json, ai_security_recommendations_json,
                                            cfg_image_relative_location, secrets_found_json, magik_hash)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -165,15 +184,16 @@ class DatabaseManager:
         """
         Adds a new information record to the InformationMap table.
 
-        :param dependencies_json: JSON string of dependencies information.
-        :param dependencies_cve_vuln_found_json: JSON string of found dependencies CVE vulnerabilities.
-        :param magik_hash: Magik hash associated with the information.
+        Args:
+            dependencies_json (str): JSON string of dependencies information.
+            dependencies_cve_vuln_found_json (str): JSON string of found dependencies CVE vulnerabilities.
+            magik_hash (str): Magik hash associated with the information.
         """
         try:
             conn = sqlite3.connect(self.db_file)
             cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO DependenciesMap (dependencies_json , dependencies_cve_vuln_found_json, magik_hash)
+            cursor.execute(f'''
+                INSERT INTO {self.dependencies_map_table_name} (dependencies_json , dependencies_cve_vuln_found_json, magik_hash)
                 VALUES (?, ?, ?)
             ''', (dependencies_json, dependencies_cve_vuln_found_json, magik_hash))
             conn.commit()
@@ -188,8 +208,9 @@ class DatabaseManager:
         """
         Adds a new information record to the InformationMap table.
 
-        :param secrets_found_json: JSON string of secrets found.
-        :param magik_hash: Magik hash associated with the information.
+        Args:
+            secrets_found_json (str): JSON string of secrets found.
+            magik_hash (str): Magik hash associated with the information.
         """
         try:
             conn = sqlite3.connect(self.db_file)
@@ -210,20 +231,25 @@ class DatabaseManager:
         """
         Updates a specific field of a repository in the Repository table.
 
-        :param repo_name: Name of the repository.
-        :param repo_branch: Branch of the repository.
-        :param field_name: Name of the field to be updated.
-        :param field_value: New value for the field.
+        Args:
+            magik_hash (str): The magik hash of the repository.
+            field_name (str): The name of the field to be updated.
+            field_value (str): The new value for the field.
         """
-        self._set_fields(table_name="Repository", set_clauses=[field_name], set_values=[field_value], where_clauses=["magik_hash"], where_values=[magik_hash])
+        self._set_fields(table_name=self.repositry_table_name, set_clauses=[field_name], set_values=[field_value], where_clauses=["magik_hash"], where_values=[magik_hash])
         self.logger.info(f"Field {field_name} updated successfully.")
 
     def _generate_magik_hash(self, repo_name, repo_branch, last_commit_short_hash):
         """
         Generates a unique MD5 hash based on the provided arguments.
 
-        :param args: Arguments used to generate the hash.
-        :return: MD5 hash string.
+        Args:
+            repo_name (str): The name of the repository.
+            repo_branch (str): The branch of the repository.
+            last_commit_short_hash (str): The short hash of the last commit.
+
+        Returns:
+            str: The MD5 hash string.
         """
         magik_string = ''.join(map(str, [repo_name, repo_branch, last_commit_short_hash]))
         return hashlib.md5(magik_string.encode()).hexdigest()
@@ -232,10 +258,13 @@ class DatabaseManager:
         """
         Retrieves filenames from the InformationMap table based on a given magik hash.
 
-        :param magik_hash: The magik hash to filter by.
-        :return: List of filenames associated with the given magik hash.
+        Args:
+            magik_hash (str): The magik hash to filter by.
+
+        Returns:
+            List[str]: List of filenames associated with the given magik hash.
         """
-        filenames = self._retrieve_fields(table_name="InformationMap", field_name="file_name", where_clauses=["magik_hash"], where_values=[magik_hash], one_or_all="all")
+        filenames = self._retrieve_fields(table_name=self.information_map_table_name, field_name="file_name", where_clauses=["magik_hash"], where_values=[magik_hash], one_or_all="all")
         self.logger.debug(f"File names for magik hash {magik_hash}: {filenames}")
         if filenames:
             return [filename[0] for filename in filenames]
@@ -247,30 +276,33 @@ class DatabaseManager:
         """
         Retrieves rows of information from every table that matches the given magik_hash.
 
-        :param magik_hash: The magik hash to filter by.
-        :return: A dictionary containing information from all relevant tables.
+        Args:
+            magik_hash (str): The magik hash to filter by.
+
+        Returns:
+            Optional[Dict[str, Any]]: A dictionary containing information from all relevant tables.
         """
         info = {}
         try:
             conn = sqlite3.connect(self.db_file)
             cursor = conn.cursor()
             # Retrieve Repository info
-            cursor.execute('SELECT * FROM Repository WHERE magik_hash = ?', (magik_hash,))
+            cursor.execute(f'SELECT * FROM {self.repositry_table_name} WHERE magik_hash = ?', (magik_hash,))
             repo_info = cursor.fetchone()
             if repo_info:
-                info['Repository'] = repo_info
+                info[self.repositry_table_name] = repo_info
 
             # Retrieve InformationMap info
-            cursor.execute('SELECT * FROM InformationMap WHERE magik_hash = ?', (magik_hash,))
+            cursor.execute(f'SELECT * FROM {self.information_map_table_name} WHERE magik_hash = ?', (magik_hash,))
             info_map = cursor.fetchall()
             if info_map:
-                info['InformationMap'] = info_map
+                info[self.information_map_table_name] = info_map
 
             # Retrieve DependenciesMap info
-            cursor.execute('SELECT * FROM DependenciesMap WHERE magik_hash = ?', (magik_hash,))
+            cursor.execute(f'SELECT * FROM {self.dependencies_map_table_name} WHERE magik_hash = ?', (magik_hash,))
             dependencies_info = cursor.fetchone()
             if dependencies_info:
-                info['DependenciesMap'] = dependencies_info
+                info[self.dependencies_map_table_name] = dependencies_info
 
             return info
         except sqlite3.Error as e:
@@ -284,12 +316,15 @@ class DatabaseManager:
         """
         Retrieves a specific field from the InformationMap table based on a magik hash and filename.
 
-        :param magik_hash: The magik hash to filter by.
-        :param filename: The filename to filter by.
-        :param field_name: The field to retrieve.
-        :return: The value of the field, or None if not found.
+        Args:
+            magik_hash (str): The magik hash to filter by.
+            filename (str): The filename to filter by.
+            field_name (str): The field to retrieve.
+
+        Returns:
+            The value of the field, or None if not found.
         """
-        result = self._retrieve_fields(table_name="InformationMap", field_name=field_name, where_clauses=["magik_hash"], where_values=[magik_hash], one_or_all="one")
+        result = self._retrieve_fields(table_name=self.information_map_table_name, field_name=field_name, where_clauses=["magik_hash"], where_values=[magik_hash], one_or_all="one")
         if result:
             return result
         else:
@@ -299,13 +334,16 @@ class DatabaseManager:
         """
         Retrieves a specific field from the Repository table based on the repository name and branch.
 
-        :param repo_name: The name of the repository.
-        :param repo_branch: The branch of the repository.
-        :param field_name: The field to retrieve.
-        :return: The value of the field, or None if not found.
+        Args:
+            repo_name (str): The name of the repository.
+            repo_branch (str): The branch of the repository.
+            field_name (str): The field to retrieve.
+
+        Returns:
+            The value of the field, or None if not found.
         """
         magik_hash = self._get_magik_hash(repo_name, repo_branch)
-        result = self._retrieve_fields(table_name="Repository", field_name=field_name, where_clauses=["magik_hash"], where_values=[magik_hash], one_or_all="one")
+        result = self._retrieve_fields(table_name=self.repositry_table_name, field_name=field_name, where_clauses=["magik_hash"], where_values=[magik_hash], one_or_all="one")
         if result:
             return result
         else:
@@ -315,12 +353,15 @@ class DatabaseManager:
         """
         Retrieves a specific field from a given table based on provided WHERE clauses.
 
-        :param table_name: The name of the table to query.
-        :param field_name: The field to retrieve.
-        :param where_clauses: A list of WHERE clauses for filtering.
-        :param where_values: A list of values corresponding to the WHERE clauses.
-        :param one_or_all: Specifies whether to fetch one record or all records that match.
-        :return: The value of the field, a list of values, or None if not found.
+        Args:
+            table_name (str): The name of the table to query.
+            field_name (str): The field to retrieve.
+            where_clauses (list): A list of WHERE clauses for filtering.
+            where_values (list): A list of values corresponding to the WHERE clauses.
+            one_or_all (str, optional): Specifies whether to fetch one record or all records that match. Defaults to "one".
+
+        Returns:
+            The value of the field, a list of values, or None if not found.
         """
         if (type(where_clauses) == "<class 'list'>" and type(where_values) == "<class 'list'>") and (len(where_clauses) != len(where_values)):
             self.logger.error(f"The number of where clauses {len(where_clauses)} and values {len(where_values)} must be equal.")
@@ -358,11 +399,12 @@ class DatabaseManager:
         """
         Sets specific fields in a given table based on provided WHERE clauses.
 
-        :param table_name: The name of the table to query.
-        :param set_clauses: A list of SET clauses for updating fields.
-        :param set_values: A list of values corresponding to the SET clauses.
-        :param where_clauses: A list of WHERE clauses for filtering.
-        :param where_values: A list of values corresponding to the WHERE clauses.
+        Args:
+            table_name (str): The name of the table to query.
+            set_clauses (list): A list of SET clauses for updating fields.
+            set_values (list): A list of values corresponding to the SET clauses.
+            where_clauses (list, optional): A list of WHERE clauses for filtering. Defaults to ["1"].
+            where_values (list, optional): A list of values corresponding to the WHERE clauses. Defaults to ["1"].
         """
         if (type(set_clauses) == "<class 'list'>" and type(set_values) == "<class 'list'>") and (len(set_clauses) != len(set_values)):
             self.logger.error(f"The number of set clauses {len(set_clauses)} and values {len(set_values)} must be equal.")
@@ -397,11 +439,14 @@ class DatabaseManager:
         """
         Retrieves the magik hash based on the repository name and branch.
 
-        :param repo_name: Name of the repository.
-        :param repo_branch: Branch of the repository.
-        :return: The magik hash, or None if not found.
+        Args:
+            repo_name (str): Name of the repository.
+            repo_branch (str): Branch of the repository.
+
+        Returns:
+            str: The magik hash, or None if not found.
         """
-        result = self._retrieve_fields(table_name="Repository", field_name="magik_hash", where_clauses=["repo_name", "repo_branch"]\
+        result = self._retrieve_fields(table_name=self.repositry_table_name, field_name="magik_hash", where_clauses=["repo_name", "repo_branch"]\
             , where_values=[repo_name, repo_branch], one_or_all="one")
         if result:
             return result
@@ -412,8 +457,11 @@ class DatabaseManager:
         """
         Retrieves the entire table.
 
-        :param table_name: Name of the table.
-        :return: The table, or None if not found.
+        Args:
+            table_name (str): Name of the table.
+
+        Returns:
+            List[Tuple]: The table, or None if not found.
         """
         try:
             conn = sqlite3.connect(self.db_file)
@@ -433,69 +481,4 @@ class DatabaseManager:
 
 
 if __name__ == "__main__":
-    import random
-    import string
-    import json
-    logging.basicConfig(level=logging.DEBUG)
-
-    # Initialize the DatabaseManager with the database file
-    db_manager = DatabaseManager('./data/database/git_handler_test.sqlite')
-    tables = db_manager._get_table("Repository")
-    print(tables)
-    # # Check if the database exists, if not, create it
-    # db_manager.create_tables()
-    # def random_string(length=5):
-    #     letters = string.ascii_lowercase
-    #     return ''.join(random.choice(letters) for _ in range(length))
-    # # Add repositories
-    # hash_list = []
-    # repo_and_branch = {}
-    # for i in range(3):
-    #     repo_name = random_string(5)
-    #     repo_origin = f"https://github.com/{repo_name}"
-    #     repo_branch = 'dev' + random_string(4)
-    #     lcmsg = random_string(20)
-    #     lcshh = random_string(7)
-    #     added_by = random_string(5)
-    #     hash_list.append(db_manager._generate_magik_hash(repo_name, repo_branch, lcshh))
-    #     repo_and_branch[repo_name] = repo_branch
-    #     repo_location = f"./data/downloads/{hashlib.md5((''.join(map(str, [repo_name, repo_branch]))).encode()).hexdigest()}"
-    #     db_manager.add_repository(repo_name, repo_origin, repo_branch, repo_location, added_by, lcmsg, lcshh)
-
-    # # Sync repositories
-    # for repo, branch in repo_and_branch.items():
-    #     last_synced_by = random_string(5)
-    #     last_commit_msg = random_string(20)
-    #     last_commit_short_hash = random_string(7)
-    #     db_manager.sync_repository(repo, branch, last_synced_by, last_commit_msg, last_commit_short_hash)
-
-    # # Add information
-    # for i in range(40):
-    #     dataflow_json = json.dumps({"data": random_string(5)})
-    #     dependencies_json = json.dumps({"dependencies": random_string(5)})
-    #     owasp_top10_json = json.dumps({"owasp": random_string(5)})
-    #     ai_bp_recommendations_json = json.dumps({"ai_bp": random_string(5)})
-    #     ai_security_recommendations_json = json.dumps({"ai_security": random_string(5)})
-    #     cfg_image_relative_location = random_string(5)
-    #     dependencies_cve_vuln_found_json = json.dumps({"cve_vuln": random_string(5)})
-    #     file_name = random_string(5)
-    #     magik_hash = random.choice(hash_list)
-    #     db_manager.add_information(dataflow_json, dependencies_json, owasp_top10_json, ai_bp_recommendations_json,
-    #                                ai_security_recommendations_json, cfg_image_relative_location,
-    #                                dependencies_cve_vuln_found_json, file_name, magik_hash)
-    
-    # # Retrieve filenames by magik hash
-    # magik_hash = random.choice(hash_list)
-    # print(db_manager.get_filenames_by_magik_hash(magik_hash))
-    
-    # # Retrieve field by magik hash and filename
-    # magik_hash = random.choice(hash_list)
-    # filename = random_string(5)
-    # print(db_manager.retrieve_field_by_magik_hash_and_filename(magik_hash, filename, "dataflow_json"))
-    
-    # # Retrieve field by repo name and branch
-    # repo_name = random.choice(list(repo_and_branch.keys()))
-    # print
-    # repo_branch = repo_and_branch[repo_name]
-    # print(db_manager.retrieve_field_by_repo_name_and_branch(repo_name, repo_branch, "last_commit_msg"))
-    
+    pass

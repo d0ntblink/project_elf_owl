@@ -1,0 +1,83 @@
+/* daracule theme colors */
+:root {
+    --backgroud: #282a36;
+    --current-line: #44475a;
+    --selection: #44475a;
+    --foreground: #f8f8f2;
+    --comment: #6272a4;
+    --cyan: #8be9fd;
+    --green: #50fa7b;
+    --orange: #ffb86c;
+    --pink: #ff79c6;
+    --purple: #bd93f9;
+    --red: #ff5555;
+    --yellow: #f1fa8c;
+}
+
+/* all if unset */
+body, header, footer, .repobox, .navbox, .linksbox, .repos {
+    border: 1px solid var(--current-line);
+    border-radius: 10px;
+    margin: 2%;
+    padding: 2%;
+    text-align: center;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+body {
+    background-color: var(--current-line);
+    color: var(--purple);
+}
+
+header {
+    background-color: var(--orange);
+    color: var(--foreground);
+    clear: both;
+}
+
+footer {
+    background-color: var(--backgroud);
+    color: var(--foreground);
+    clear: both;
+}
+
+.logo {
+    max-width: 100px;
+    width: auto;
+    height: auto;
+    float: left;
+    clear: left;
+}
+
+.repobox, .navbox, .linksbox {
+    overflow: scroll;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.navbox, .linksbox {
+    width: 20%;
+    max-width: 300px;
+    float: right;
+    clear: right;
+}
+
+.navbox {
+    background-color: var(--backgroud);
+    color: var(--orange);
+}
+
+.linksbox {
+    background-color: var(--backgroud);
+    color: var(--orange);
+}
+
+.repobox {
+    width: 60%;
+    background-color: var(--backgroud);
+    color: var(--orange);
+    float: both;
+    clear: left;
+}

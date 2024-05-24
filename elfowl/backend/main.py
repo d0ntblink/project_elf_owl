@@ -1,16 +1,18 @@
-from database_handler import DatabaseManager
-from code_analyzer import PythonASTAnalyzer, PythonDataFlow, CodeCFGAnalyzer
-from dependency_mapper import PythonDepandaAnalyzer
-from openai_handler import OpenAIClient
-from cve_gatherer import VulnerableCodeSearch
-from secret_finder import SecretFinder
-from git_handler import GitHandler
-from file_manager import FileManager
-from thread_handler import ThreadManager
+from backend import database_handler
+from backend import openai_handler
+from backend import thread_handler
+from backend import dependency_mapper
+from backend import cve_gatherer
+from backend import git_handler
+from backend import secret_finder
+from backend import file_manager
+from backend import code_analyzer
+from backend import test_secrets
+
 from json import dumps, loads
 import logging
 
-class runDashboard:
+class runBackend:
     """
     A class that represents a dashboard for repository analysis.
 
@@ -26,7 +28,8 @@ class runDashboard:
         max_threads (int, optional): The maximum number of threads. Defaults to 5.
     """
 
-    def __init__(self, db_file, repo_locations, image_store_location, openai_model,
+    def __init__(self, db_file, repository_table_name, repository_info_table_name,
+                 repository_dependency_table_name, repo_locations, image_store_location, openai_model,
                  api_key, org_id, vuln_code_host, truffles_config_file, max_threads=5):
         """
         Initializes a new instance of the runDashboard class.
@@ -43,20 +46,25 @@ class runDashboard:
             max_threads (int, optional): The maximum number of threads. Defaults to 5.
         """
         self.logger = logging.getLogger("DashboardLogger")
-        self.gitHandler = GitHandler(repo_locations)
-        self.vulnCodeSearch = VulnerableCodeSearch(vuln_code_host=vuln_code_host)
-        self.fileManager = FileManager()
-        self.threadManager = ThreadManager()
-        self.databaseManager = DatabaseManager(db_file)
-        self.openaiClient = OpenAIClient(api_key=api_key, org_id=org_id)
-        self.secretFinder = SecretFinder(config_file=truffles_config_file)
-        self.cfgAnalyzer = CodeCFGAnalyzer(save_image_location=image_store_location)
+        self.gitHandler = git_handler.GitHandler(repo_locations)
+        self.vulnCodeSearch = cve_gatherer.VulnerableCodeSearch(vuln_code_host=vuln_code_host)
+        self.fileManager = file_manager.FileManager()
+        self.threadManager = thread_handler.ThreadManager()
+        self.databaseManager = database_handler.DatabaseManager(db_file,
+                                                                repositry_table_name=repository_table_name,
+                                                                information_map_table_name=repository_info_table_name,
+                                                                dependencies_map_table_name=repository_dependency_table_name)
+    
+        self.openaiClient = openai_handler.OpenAIClient(api_key=api_key, org_id=org_id)
+        self.secretFinder = secret_finder.SecretFinder(config_file=truffles_config_file)
+        self.cfgAnalyzer = code_analyzer.CodeCFGAnalyzer(save_image_location=image_store_location)
         self.image_store_location = image_store_location
         self.repo_locations = repo_locations
         self.db_location = db_file
         self.openai_model = openai_model
         self.max_threads = max_threads
         self.magik_hash = ""
+        # self.setup_tables()
 
     def setup_tables(self):
         """
@@ -164,9 +172,9 @@ class runDashboard:
             repo_location (str): The location of the repository.
             magik_hash (str): The magik hash of the repository.
         """
-        self.depenAnalyzer = PythonDepandaAnalyzer()
-        self.astAnalyzer = PythonASTAnalyzer()
-        self.flowAnalyzer = PythonDataFlow()
+        self.depenAnalyzer = dependency_mapper.PythonDepandaAnalyzer()
+        self.astAnalyzer = code_analyzer.PythonASTAnalyzer()
+        self.flowAnalyzer = code_analyzer.PythonDataFlow()
         self.threadManager.create_a_pool(f"{magik_hash}analysis")
         self.logger.info(f"Repo analyzer initialized for {repo_location}")
         code_file_list = self.fileManager.list_code_files(repo_location)
@@ -275,7 +283,7 @@ class runDashboard:
         )
         return sec_json, bp_json
 
-    def cleanup(self):
+    def cleanup(self):  
         """
         Cleans up the resources.
         """
@@ -285,6 +293,15 @@ class runDashboard:
         self.logger.info(f"Removed all images from {self.image_store_location}/*")
         self.fileManager.remove_file(f"{db_location}")
         self.logger.info(f"Removed database {db_location}")
+        
+    def get_repositories(self, table_name):
+        """
+        Gets the repositories.
+
+        Returns:
+            list: The list of repositories.
+        """
+        return self.databaseManager._get_table(table_name=table_name)
 
 if __name__ == "__main__":
     from test_secrets import apikey, orgid
@@ -293,7 +310,7 @@ if __name__ == "__main__":
     repo_locations = "/elfowl/data/downloads"
     image_store_location = "/elfowl/data/images"
     openai_model = "gpt-3.5-turbo-1106"
-    test_dash = runDashboard(db_location, repo_locations, image_store_location, openai_model=openai_model,\
+    test_dash = runBackend(db_location, repo_locations, image_store_location, openai_model=openai_model,\
         api_key=apikey, org_id=orgid, vuln_code_host="nginx", truffles_config_file="/elfowl/truffles_config.yml", max_threads=10)
     try:
         test_dash.setup_tables()
