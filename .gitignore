@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *secrets.py
+*/cache/*
 */data/images/*
 */data/database/*
 */data/downloads/*
