@@ -1,33 +1,41 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>elfowl SAST Suite</title>
-    {% load static %}
-    {% comment %} {% load visualizer %} {% endcomment %}
-    <link rel="stylesheet" href="{% static 'styles/main.css' %}">
-</head>
-<body>
-    <header>
-        <img class="logo" src="{% static 'images/elfowl-logo.png' %}" alt="elfowl-logo">
-        <a href="{% url 'index' %}" style="float: right;">Documentation</a>
-        <h1>elfowl SAST Suite</h1>
-    </header>
-    <main>
+{% extends 'base.html' %}
+{% load static %}
+{% load visualizer %}
+
+{% block title %}{{ repo_name }}/{{ file_name }}{% endblock %}
+
+{% block content %}
+    <div>
+        <h2><a href="{% url 'repo_report_nav' magik_hash %}">{{ repo_name }}</a> / {{ file_name }}</h2>
         {% for file in file_information %}
-        <div>
-            <a>{{ file.dataflow_json }}</a>
-            <a>{{ file.owasp_top10_json }}</a>
-            <a>{{ file.ai_bp_recommendations_json }}</a>
-            <a>{{ file.ai_security_recommendations_json }}</a>
-            <img src="{{ file.cfg_image_relative_location }}" alt="cfg_image">
-            <a>{{ file.secrets_found_json }}</a>
-        </div>
+            <div>
+                <div>
+                    <h4>AI BP Recommendations</h4>
+                    <pre>{{ file.ai_bp_recommendations_json|auto_hyperlink|cwe_hyperlink }}</pre>
+                </div>
+                <div>
+                    <h4>AI Security Recommendations</h4>
+                    <pre>{{ file.ai_security_recommendations_json|auto_hyperlink|cwe_hyperlink }}</pre>
+                </div>
+                <div>
+                    <h4>Dataflow</h4>
+                    <pre>{{ file.dataflow_json|auto_hyperlink|cwe_hyperlink }}</pre>
+                </div>
+                <div>
+                    <h4>OWASP Top 10</h4>
+                    <pre>{{ file.owasp_top10_json|auto_hyperlink|cwe_hyperlink }}</pre>
+                </div>
+                <div>
+                    <h4>CFG Image</h4>
+                    <a href="{% static 'images/cache/cfg_b2aac6f7d76d5ceb81fe3fc6904fddc31b8f976ce76cc259f54598f91f1fe3e2.png' %}" target="_blank">
+                    <img class="cfg" src="{% static 'images/cache/cfg_b2aac6f7d76d5ceb81fe3fc6904fddc31b8f976ce76cc259f54598f91f1fe3e2.png' %}" alt="CFG Image">
+                    </a>
+                </div>
+                <div>
+                    <h4>Secrets Found</h4>
+                    <pre>{{ file.secrets_found_json|auto_hyperlink|cwe_hyperlink }}</pre>
+                </div>
+            </div>
         {% endfor %}
-    </main>
-    <footer>
-        <p>&copy;2024 d0ntblink</p>
-    </footer>
-</body>
-</html>
+    </div>
+{% endblock %}

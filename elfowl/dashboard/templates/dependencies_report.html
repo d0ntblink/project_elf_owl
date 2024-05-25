@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load visualizer %}
+
+{% block title %}{{ repo_name }} Dependencies{% endblock %}
+
+{% block content %}
+    <div class="container mt-4">
+        <h2><a href="{% url 'repo_report_nav' magik_hash %}">{{ repo_name }}</a> / Dependencies</h2>
+        <div>
+            {% if dependencies_vuln_report %}
+                <table class="table table-striped table-hover">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Library</th>
+                            <th>Specified Version</th>
+                            <th>Latest Non-Vulnerable Version</th>
+                            <th>Vulnerability Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lib, details in dependencies_vuln_report.items %}
+                            <tr>
+                                <td>{{ lib }}</td>
+                                <td>{{ lib_version }}</td>
+                                <td>{{ details.3 }}</td>
+                                <td>
+                                    <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#vuln-details-{{ forloop.counter }}" aria-expanded="false" aria-controls="vuln-details-{{ forloop.counter }}">
+                                        View Details
+                                    </button>
+                                    <div class="collapse" id="vuln-details-{{ forloop.counter }}">
+                                        <div class="card card-body">
+                                            {% for field, vuln_info in details.4.0.items %}
+                                                <strong>{{ field }}:</strong> {{ vuln_info|auto_hyperlink }}<br>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No vulnerabilities found for dependencies.</p>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

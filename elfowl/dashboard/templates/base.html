@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}elfowl SAST Suite{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'styles/main.css' %}">
+</head>
+<body>
+    <header>
+        <a href="{% url 'index' %}">
+            <img class="logo" src="{% static 'images/elfowl-logo.png' %}" alt="elfowl-logo">
+        </a>
+        <h1>elfowl SAST Suite</h1>
+    </header>
+    <main>
+        <div class="navbox">
+            <table>
+                <tr>
+                    <td><a href="{% url 'index' %}">🏠 HOME</a></td>
+                    <td><a href="{% url 'settings' %}">⚙️ SETTINGS</a></td>
+                    <td><a href="{% url 'add_repo' %}">➕ ADD REPOSITORY</a></td>
+                    <td><a href="{% url 'documentation' %}">📄 DOCUMENTATION</a></td>
+                    <td><a href="{% url 'about' %}">ℹ️ ABOUT</a></td>
+                    <td><a href="{% url 'contact' %}">✉️ CONTACT</a></td>
+                </tr>
+            </table>
+        </div>
+        {% block content %}
+        {% endblock %}
+    </main>
+    <footer>
+        <p>Made with ❤️ by d0ntblink &copy; 2024</p>
+        <p>Robots are coming! 🤖</p>
+    </footer>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

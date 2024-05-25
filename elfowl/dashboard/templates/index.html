@@ -1,44 +1,36 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>elfowl SAST Suite</title>
-    {% load static %}
-    {% comment %} {% load visualizer %} {% endcomment %}
-    <link rel="stylesheet" href="{% static 'styles/main.css' %}">
-</head>
-<header>
-    <img class=logo src="{% static 'images/elfowl-logo.png' %}" alt="elfowl-logo">
-    <p href="{% url 'index' %}" style="float: right;">Documentation</p>
-    <h1>elfowl SAST Suite</h1>
-</header>
-<body>
-    <div class=navbox>
-        <a>Navigation</a><br>
-        <a href="{% url 'index' %}">HOME</a><br>
-        <a href="{% url 'add_repo' %}">MONITOR A NEW REPOSITORY</a><br>
-        <a href="{% url 'settings' %}">SETTINGS</a>
-        {% comment %} <a href="{% url 'admin' %}">ADMIN/a> {% endcomment %}
-    </div>
-    <div class=linksbox>
-        <a>Project Links</a><br>
-        <a href="linkedin.com/in/elfowl">LinkedIn</a><br>
-        <a href="github.com/elfowl">GitHub</a><br>
-        <a href="twitter.com/elfowl">Twitter</a>
-    </div>
-    <ul>
-        {% for repository in repositories %}
-            <div class=repobox>
-                <a href="{% url 'report' repository.magik_hash %}">{{ repository.repo_name }}</a>
-                {{ repository.repo_origin }}
-                last synced on: {{ repository.last_synced_on }}
-                added by: {{ repository.added_by }}
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}elfowl SAST Suite{% endblock %}
+
+{% block content %}
+    {% for repository in repositories %}
+        <div>
+            <div class="listbox">
+                <h2><a href="{% url 'repo_report_nav' repository.magik_hash %}">
+                    {{ repository.repo_name }} @ {{ repository.repo_branch }}</a></h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Repository Origin</th>
+                            <th>Last Synced On</th>
+                            <th>Last Synced By</th>
+                            <th>Added On</th>
+                            <th>Added By</th>
+                            <th>Last Commit Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>{{ repository.repo_origin }}</td>
+                        <td>{{ repository.last_synced_on }}</td>
+                        <td>{{ repository.last_synced_by }}</td>
+                        <td>{{ repository.added_on }}</td>
+                        <td>{{ repository.added_by }}</td>
+                        <td>{{ repository.last_commit_msg }}</td>
+                    </tr>
+                    </tbody>
+                </table>
             </div>
-        {% endfor %}
-    </ul>
-</body>
-<footer>
-    <p>&copy;2024 d0ntblink</p>
-</footer>
-</html>
+        </div>
+    {% endfor %}
+{% endblock %}

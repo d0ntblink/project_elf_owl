@@ -3,7 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 *secrets.py
-*/cache/*
+# ignore anything under cache
+*cache/
 */data/images/*
 */data/database/*
 */data/downloads/*
