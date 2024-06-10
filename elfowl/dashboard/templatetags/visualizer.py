@@ -9,7 +9,7 @@ def auto_hyperlink(text):
     url_pattern = re.compile(r'(https?://\S+)')
     
     def replace_and_linkify(match):
-        url = match.group(0).replace("http://nginx/", "http://localhost/")
+        url = match.group(0).replace("http://nginx/", "http://192.168.1.131/")
         return f'<a href="{url}" target="_blank">{url}</a>'
     
     if isinstance(text, list):

@@ -609,7 +609,7 @@ class CodeCFGAnalyzer:
         filename = f'cfg_{self._generate_hash()}'  # PNG image filename is hash of the code
         cfg.build_visual(filename, directory=self.save_image_location, format='png', show=False, cleanup=True, build_keys=False, build_own=False)
         self.logger.info(f"CFG image saved as {filename}")
-        return f'{self.save_image_location}{filename}.png'
+        return f'{self.save_image_location}/{filename}.png'
 
     def _generate_hash(self):
         """

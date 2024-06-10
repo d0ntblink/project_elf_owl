@@ -1,15 +1,26 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}monitor a new repository{% endblock %}
+{% block title %}Scan a New Repository{% endblock %}
 
 {% block content %}
-    <h1>MONITOR A NEW REPOSITORY</h1>
-    <form method="post">
-        {% csrf_token %}
-        <label for="input_repo_remote">Git Link to The Repository</label><br>
-        <input type="text" id="input_repo_remote" name="input_repo_remote"><br>
-        <label for="input_repo_branch">Branch Name</label><br>
-        <input type="text" id="input_repo_branch" name="input_repo_branch"><br><br>
-        <button type="submit">Submit</button>
-    </form>
+    <h1>Scan a New Repository</h1>
+    {% if all_values_present %}
+        <p>Please provide the details of the repository you want to monitor.</p>
+        <form method="post" class="settings-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="input_repo_remote">Git Link to The Repository</label>
+                <input type="text" id="input_repo_remote" name="input_repo_remote" required placeholder="Enter the Git repository link">
+            </div>
+            
+            <div class="form-group">
+                <label for="input_repo_branch">Branch Name</label>
+                <input type="text" id="input_repo_branch" name="input_repo_branch" required placeholder="Enter the branch name">
+            </div>
+            
+            <button type="submit">Submit</button>
+        </form>
+    {% else %}
+        <p>To add a new repository, please ensure that all required session values are set. Head to the <a href="{% url 'settings' %}">settings page</a> to configure your API key, organization ID, and model.</p>
+    {% endif %}
 {% endblock %}

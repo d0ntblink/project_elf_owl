@@ -7,15 +7,59 @@
 {% block content %}
     <div>
         <h2><a href="{% url 'repo_report_nav' magik_hash %}">{{ repo_name }}</a> / {{ file_name }}</h2>
+        <!-- Fancybox CSS -->
+        <link href="{% static 'fancybox/fancybox.css' %}" rel="stylesheet">
+        <!-- jQuery Zoom CSS -->
+        <link href="{% static 'jquery-zoom/jquery.zoom.css' %}" rel="stylesheet">
+        <!-- Prism CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/prismjs/themes/prism.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.css" data-noprefix />
+
+        <div>
+            <!-- Add a scrollable code box with line numbers -->
+            <pre class="language-none line-numbers" style="overflow-x: auto; max-height: 500px;">
+                <code>
+                    {{ file_content }}
+                </code>
+            </pre>
+        </div>
         {% for file in file_information %}
             <div>
                 <div>
-                    <h4>AI BP Recommendations</h4>
-                    <pre>{{ file.ai_bp_recommendations_json|auto_hyperlink|cwe_hyperlink }}</pre>
+                    <a href="data:image/png;base64,{{ image_data }}" data-fancybox data-caption="CFG Image">
+                        <img class="cfg zoom" src="data:image/png;base64,{{ image_data }}" alt="CFG Image">
+                    </a>
                 </div>
                 <div>
                     <h4>AI Security Recommendations</h4>
-                    <pre>{{ file.ai_security_recommendations_json|auto_hyperlink|cwe_hyperlink }}</pre>
+                    <ul>
+                        {% for issue in ai_security_recommendations %}
+                            <li>
+                                <strong>{{ issue.issueTitle }}</strong>: {{ issue.issue }}
+                                <br> Fix: {{ issue.fix }}
+                                <br> Line Range: {{ issue.lineRange }}
+                                <br> CWE: {{ issue.CWE |auto_hyperlink|cwe_hyperlink }}
+                                <br> Impact: {{ issue.impact }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div>
+                    <h4>AI BP Recommendations</h4>
+                    <ul>
+                        {% for reco in ai_bp_recommendations %}
+                            <li>
+                                <strong>{{ reco.issueTitle }}</strong>: {{ issue.issue }}
+                                <br> Issue: {{ reco.issue }}
+                                <br> Line Range: {{ reco.lineRange }}
+                                <br> Impact: {{ reco.recommendation }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div>
+                    <h4>Secrets Found</h4>
+                    <pre>{{ file.secrets_found_json|auto_hyperlink|cwe_hyperlink }}</pre>
                 </div>
                 <div>
                     <h4>Dataflow</h4>
@@ -25,17 +69,39 @@
                     <h4>OWASP Top 10</h4>
                     <pre>{{ file.owasp_top10_json|auto_hyperlink|cwe_hyperlink }}</pre>
                 </div>
-                <div>
-                    <h4>CFG Image</h4>
-                    <a href="{% static 'images/cache/cfg_b2aac6f7d76d5ceb81fe3fc6904fddc31b8f976ce76cc259f54598f91f1fe3e2.png' %}" target="_blank">
-                    <img class="cfg" src="{% static 'images/cache/cfg_b2aac6f7d76d5ceb81fe3fc6904fddc31b8f976ce76cc259f54598f91f1fe3e2.png' %}" alt="CFG Image">
-                    </a>
-                </div>
-                <div>
-                    <h4>Secrets Found</h4>
-                    <pre>{{ file.secrets_found_json|auto_hyperlink|cwe_hyperlink }}</pre>
-                </div>
             </div>
         {% endfor %}
+        <!-- Prism JS -->
+        <script src="https://cdn.jsdelivr.net/npm/prismjs/prism.min.js"></script>
+        <!-- jQuery (necessary for Fancybox and Zoom) -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <!-- Fancybox JS -->
+        <script src="{% static 'fancybox/fancybox.umd.js' %}"></script>
+        <!-- jQuery Zoom JS -->
+        <script src="{% static 'jquery-zoom/jquery.zoom.min.js' %}"></script>
+        <!-- Initialize Fancybox and Zoom -->
+        <script>
+            $(document).ready(function() {
+                // Initialize Fancybox
+                Fancybox.bind("[data-fancybox]", {
+                    // Options can be added here
+                });
+
+                // Initialize Zoom on the image with the class 'zoom'
+                $('.zoom').zoom();
+            });
+        </script>
+        <!-- Initialize Prism.js -->
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                // Highlight all code blocks
+                Prism.highlightAll();
+
+                // Initialize line numbers
+                document.querySelectorAll('pre').forEach((block) => {
+                    block.classList.add('line-numbers');
+                });
+            });
+        </script>
     </div>
 {% endblock %}

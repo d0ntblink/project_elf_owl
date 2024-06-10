@@ -1,7 +1,31 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}settings{% endblock %}
+{% block title %}Settings{% endblock %}
 
 {% block content %}
-
+    <h1>Settings</h1>
+    <form method="post" action="{% url 'settings' %}" class="settings-form">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="api_value">API Token:</label>
+            <input type="text" id="api_value" name="api_value" required placeholder="Enter your API Token" value="{{ session_values.apikey }}">
+        </div>
+        
+        <div class="form-group">
+            <label for="org_value">Organization ID:</label>
+            <input type="text" id="org_value" name="org_value" required placeholder="Enter your Organization ID" value="{{ session_values.orgid }}">
+        </div>
+        
+        <div class="form-group">
+            <label for="model_value">GPT Model:</label>
+            <select id="model_value" name="model_value" required>
+                <option value="" disabled>Select a model</option>
+                {% for model in available_models %}
+                    <option value="{{ model }}" {% if session_values.model == model %}selected{% endif %}>{{ model }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <button type="submit">Save Session Values</button>
+    </form>
 {% endblock %}
