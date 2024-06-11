@@ -23,54 +23,86 @@
                 </code>
             </pre>
         </div>
-        {% for file in file_information %}
+        <div>
             <div>
-                <div>
-                    <a href="data:image/png;base64,{{ image_data }}" data-fancybox data-caption="CFG Image">
-                        <img class="cfg zoom" src="data:image/png;base64,{{ image_data }}" alt="CFG Image">
-                    </a>
-                </div>
-                <div>
-                    <h4>AI Security Recommendations</h4>
-                    <ul>
-                        {% for issue in ai_security_recommendations %}
-                            <li>
-                                <strong>{{ issue.issueTitle }}</strong>: {{ issue.issue }}
-                                <br> Fix: {{ issue.fix }}
-                                <br> Line Range: {{ issue.lineRange }}
-                                <br> CWE: {{ issue.CWE |auto_hyperlink|cwe_hyperlink }}
-                                <br> Impact: {{ issue.impact }}
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                <div>
-                    <h4>AI BP Recommendations</h4>
-                    <ul>
-                        {% for reco in ai_bp_recommendations %}
-                            <li>
-                                <strong>{{ reco.issueTitle }}</strong>: {{ issue.issue }}
-                                <br> Issue: {{ reco.issue }}
-                                <br> Line Range: {{ reco.lineRange }}
-                                <br> Impact: {{ reco.recommendation }}
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                <div>
-                    <h4>Secrets Found</h4>
-                    <pre>{{ file.secrets_found_json|auto_hyperlink|cwe_hyperlink }}</pre>
-                </div>
-                <div>
-                    <h4>Dataflow</h4>
-                    <pre>{{ file.dataflow_json|auto_hyperlink|cwe_hyperlink }}</pre>
-                </div>
-                <div>
-                    <h4>OWASP Top 10</h4>
-                    <pre>{{ file.owasp_top10_json|auto_hyperlink|cwe_hyperlink }}</pre>
-                </div>
+                <a href="data:image/png;base64,{{ image_data }}" data-fancybox data-caption="CFG Image">
+                    <img class="cfg-image" src="data:image/png;base64,{{ image_data }}" alt="CFG Image">
+                </a>
             </div>
-        {% endfor %}
+            <div class="recommendation-box">
+                <h4>Possible OWASP Top 10 Violations</h4>
+                {% for violation, lines in owasp_top10.items %}
+                    {% if lines|length > 1 %}
+                        <p>{{ violation }}: 
+                        {% for line in lines %}
+                            {{ line }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                        </p>
+                    {% endif %}
+                {% endfor %}
+            </div>            
+            <div class="recommendation-box">
+                <h4>AI Security Recommendations</h4>
+                <ul>
+                    {% for issue in ai_security_recommendations %}
+                        <li>
+                            <strong>{{ issue.issueTitle }}</strong>
+                            {{ issue.issue }}
+                            <strong>Fix:</strong> {{ issue.fix }}
+                            <strong>Line Range:</strong> {{ issue.lineRange }}
+                            <strong>CWE:</strong> {{ issue.CWE|auto_hyperlink|cwe_hyperlink }}
+                            <strong>Impact:</strong> {{ issue.impact }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="recommendation-box">
+                <h4>AI Best Practices Recommendations</h4>
+                <ul>
+                    {% for reco in ai_bp_recommendations %}
+                        <li>
+                            <strong>{{ reco.issueTitle }}</strong>
+                            {{ reco.issue }}
+                            <strong>Line Range:</strong> {{ reco.lineRange }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="recommendation-box">
+                <h4>Possible Secrets In Code Found</h4>
+                <ul>
+                    {% for secret, details in secrets_found.items %}
+                        <li>
+                            <strong>{{ secret }}</strong>
+                            <strong>Verfied Secret:</strong> {{ details.Verified }}
+                            <strong>Line:</strong> {{ details.Metadata.Data.Filesystem.line }}
+                            <strong>Raw:</strong> {{ details.Raw }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="dataflow-box">
+                <h4>Dataflow</h4>
+                <ul>
+                    {% for variable, details in data_flow.items %}
+                        <li>
+                            <strong>{{ variable }}</strong>
+                            <strong>Type:</strong> {{ details.type }}
+                            <strong>Changed via Input:</strong> {{ details.changed_via_input }}
+                            <strong>First Assigned at Line:</strong> {{ details.first_assigned_at_line }}
+                            <strong>Time Line:</strong>
+                            <ul>
+                                {% for event in details.time_line %}
+                                    <li>
+                                        {{ event.0 }}: {{ event.1 }} ({{ event.2 }}) {% if not forloop.last %} --> {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
         <!-- Prism JS -->
         <script src="https://cdn.jsdelivr.net/npm/prismjs/prism.min.js"></script>
         <!-- jQuery (necessary for Fancybox and Zoom) -->

@@ -30,7 +30,7 @@ footer,
 
 body {
     background-color: var(--current-line);
-    color: var(--purple);
+    color: var(--foreground);
 }
 
 header {
@@ -166,7 +166,7 @@ table {
 }
 
 .thead-dark th {
-    color: var(--purple);
+    color: var(--foreground);
     border-color: var(--foreground);
 }
 
@@ -293,4 +293,108 @@ form.settings-form button[type="submit"]:hover {
     margin: auto;
     padding: 0;
     list-style: none;
+}
+
+.recommendation-box {
+    border: 1px solid var(--current-line);
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 5px;
+    background-color: var(--background);
+    color: var(--foreground);
+}
+
+.recommendation-box h4 {
+    margin-top: 0;
+    color: var(--orange);
+}
+
+.recommendation-box ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.recommendation-box li {
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid var(--current-line);
+    border-radius: 5px;
+    background-color: var(--current-line);
+}
+
+.recommendation-box li strong {
+    display: block;
+    color: var(--pink);
+    margin-bottom: 5px;
+}
+
+.dataflow-box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px; /* Adjust as needed */
+    overflow-x: auto;
+    max-height: 300px; /* Adjust max-height as needed */
+    padding: 10px;
+    border: 1px solid var(--current-line);
+    background-color: var(--background);
+    color: var(--foreground);
+    border-radius: 5px;
+}
+
+.dataflow-box h4 {
+    width: 100%;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.dataflow-box ul {
+    flex: 1;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.dataflow-box li {
+    margin-bottom: 10px;
+}
+
+.dataflow-box strong {
+    margin-right: 5px;
+}
+
+.code-box {
+    overflow-x: auto;
+    max-height: 500px;
+    border: 1px solid var(--current-line);
+    padding: 15px;
+    border-radius: 5px;
+    background-color: var(--background);
+    color: var(--foreground);
+}
+
+.cfg-image {
+    display: block;
+    margin: 20px 0;
+    max-width: 100%;
+    border-radius: 5px;
+    border: 1px solid var(--current-line);
+}
+
+.timeline {
+    list-style: none;
+    padding: 0;
+}
+.timeline-item {
+    margin-bottom: 20px;
+    position: relative;
+}
+.timeline-item::before {
+    content: '→';
+    position: absolute;
+    left: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.timeline-item:first-child::before {
+    content: ' ';
 }

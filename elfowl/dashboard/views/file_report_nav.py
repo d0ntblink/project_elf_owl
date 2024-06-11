@@ -21,19 +21,24 @@ class file_report_nav(TemplateView):
         image_location = file_information[0].cfg_image_relative_location
         ai_security_recommendations = json.loads(file_information[0].ai_security_recommendations_json)['issues']
         ai_bp_recommendations = json.loads(file_information[0].ai_bp_recommendations_json)['recommendations']
-        print(ai_bp_recommendations)
+        secrets_found = json.loads(file_information[0].secrets_found_json)
+        data_flow = json.loads(file_information[0].dataflow_json)
+        owasp_top10 = json.loads(file_information[0].owasp_top10_json)
+        print(owasp_top10)
         fixed_image_location = image_location.replace("imagescfg", "images/cfg")
         # Read image file as binary and encode in base64
         with open(f'{fixed_image_location}', 'rb') as f:
             image_data = f.read()
             image_base64 = base64.b64encode(image_data).decode('utf-8')
         return HttpResponse(template.render({
-            'file_information': file_information,
             'file_name': file_name,
             'file_content': file_content,
             'repo_name': repo_name,
             'magik_hash': magik_hash,
             'image_data': image_base64,
             'ai_security_recommendations': ai_security_recommendations,
-            'ai_bp_recommendations': ai_bp_recommendations
+            'ai_bp_recommendations': ai_bp_recommendations,
+            'secrets_found': secrets_found,
+            'owasp_top10': owasp_top10,
+            'data_flow': data_flow
         }, request=request))
