@@ -73,7 +73,6 @@ pyvenv.cfg
 bin/
 
 # Environments
-.env
 .venv
 env/
 venv/
