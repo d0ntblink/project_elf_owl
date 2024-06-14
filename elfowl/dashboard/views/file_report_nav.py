@@ -24,7 +24,6 @@ class file_report_nav(TemplateView):
         secrets_found = json.loads(file_information[0].secrets_found_json)
         data_flow = json.loads(file_information[0].dataflow_json)
         owasp_top10 = json.loads(file_information[0].owasp_top10_json)
-        print(owasp_top10)
         fixed_image_location = image_location.replace("imagescfg", "images/cfg")
         # Read image file as binary and encode in base64
         with open(f'{fixed_image_location}', 'rb') as f:

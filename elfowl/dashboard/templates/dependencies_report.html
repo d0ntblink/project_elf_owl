@@ -31,7 +31,7 @@
                                     <div class="collapse" id="vuln-details-{{ forloop.counter }}">
                                         <div class="card card-body">
                                             {% for field, vuln_info in details.4.0.items %}
-                                                <strong>{{ field }}:</strong> {{ vuln_info|auto_hyperlink }}<br>
+                                                <strong>{{ field }}:</strong> {{ vuln_info|auto_hyperlink|hyperlinkify }}<br>
                                             {% endfor %}
                                         </div>
                                     </div>

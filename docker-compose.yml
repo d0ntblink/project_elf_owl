@@ -4,7 +4,7 @@ services:
   db:
     image: postgres:13
     env_file:
-      - docker.env
+      - .env
     volumes:
       - db_data:/var/lib/postgresql/data/
 
@@ -15,7 +15,7 @@ services:
         ./manage.py collectstatic --no-input --verbosity 0 --clear &&
         gunicorn vulnerablecode.wsgi:application -u nobody -g nogroup --bind :8000 --timeout 600 --workers 8"
     env_file:
-      - docker.env
+      - .env
     expose:
       - 8000
     volumes:
@@ -25,35 +25,73 @@ services:
     depends_on:
       - db
 
+  traefik:
+    image: traefik:v2.5
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.traefik.address=:8080"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=${EMAIL}"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.myresolver.acme.caserver=https://acme-v02.api.letsencrypt.org/directory"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "letsencrypt:/letsencrypt"
+    env_file:
+      - .env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      - "traefik.http.routers.traefik-dashboard.tls.certresolver=myresolver"
+
   nginx:
     image: nginx
-    ports:
-      - 80:80
-      - 443:443
     env_file:
-      - docker.env
+      - .env
     volumes:
       - ./etc/nginx/conf.d/:/etc/nginx/conf.d/
       - static:/var/vulnerablecode/static/
       - /var/www/html:/var/www/html
     depends_on:
       - vulnerablecode
-
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nginx.rule=Host(`vulnerablecode.${DOMAIN}`)"
+      - "traefik.http.routers.nginx.entrypoints=websecure"
+      - "traefik.http.routers.nginx.tls.certresolver=myresolver"
+      - "traefik.http.services.nginx.loadbalancer.server.port=80"
+    
   elfowl:
     build: ./elfowl
-    command: /bin/bash -c "python manage.py runserver 0.0.0.0:8000"
+    command: /bin/bash -c "python manage.py migrate &&
+      python manage.py runserver 0.0.0.0:8000"
     env_file:
-      - docker.env
-    ports:
-      - 8000:8000
+      - .env
     volumes:
-      - ./elfowl/:/elfowl/
-      # - data:/elfowl/data
+      - ./elfowl/:/app/
+      - elfowl_db:/var/lib/sqlite/
+      - elfowl_app_data:/app_data/
     depends_on:
       - vulnerablecode
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.elfowl.rule=Host(`elfowl.${DOMAIN}`)"
+      - "traefik.http.routers.elfowl.entrypoints=websecure"
+      - "traefik.http.routers.elfowl.tls.certresolver=myresolver"
+      - "traefik.http.services.elfowl.loadbalancer.server.port=8000"
 
 volumes:
   db_data:
+  elfowl_db:
+  elfowl_app_data:
   static:
-  data:
-
+  letsencrypt:

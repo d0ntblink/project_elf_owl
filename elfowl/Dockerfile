@@ -27,10 +27,10 @@ RUN set -exu \
     && curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
 
 # Set build arguments
-ARG APP_DIR=/elfowl/
+ARG APP_DIR=/app/
 ARG APP_GROUP=elfowl
 ARG APP_ENV=/opt/venv
-ARG HF_HOME=/elfowl/models
+ARG HF_HOME=/app/models
 ARG PYTHUNUNBUFFERED=1
 
 # Set environment variables

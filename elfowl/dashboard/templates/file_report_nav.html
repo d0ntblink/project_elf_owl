@@ -50,7 +50,7 @@
                             {{ issue.issue }}
                             <strong>Fix:</strong> {{ issue.fix }}
                             <strong>Line Range:</strong> {{ issue.lineRange }}
-                            <strong>CWE:</strong> {{ issue.CWE|auto_hyperlink|cwe_hyperlink }}
+                            <strong>CWE:</strong> {{ issue.CWE|auto_hyperlink|hyperlinkify|cwe_hyperlink }}
                             <strong>Impact:</strong> {{ issue.impact }}
                         </li>
                     {% endfor %}

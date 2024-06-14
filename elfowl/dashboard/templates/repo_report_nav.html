@@ -6,7 +6,7 @@
     {% for file_name, file_info in file_dict.items %}
     <div>
         <div class="listbox">
-            <h2><a href="{% url 'file_report_nav' magik_hash file_info.0 %}">{{ file_name }}</a></h2>
+            <h2><a href="{% url 'file_report_nav' magik_hash file_name %}">{{ file_name }}</a></h2>
             {{ file_info.0 }}
             <img class="langlogo" src="{% static 'images/'|add:file_info.1|add:'-logo.png' %}" alt="Language Logo">
         </div>  
@@ -14,7 +14,7 @@
     {% endfor %}
     <div>
         <div class="listbox">
-            <h2><a href="{% url 'dependencies_report' magik_hash %}">dependency analyzer<a></h2>
+            <h2><a href="{% url 'dependencies_report' magik_hash %}">dependency analyzer</a></h2>
         </div>  
     </div>
 {% endblock %}

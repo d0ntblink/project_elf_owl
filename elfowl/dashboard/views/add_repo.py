@@ -9,9 +9,9 @@ class add_repo(TemplateView):
     logger = logging.getLogger("addRepoView")
     logger.setLevel(logging.DEBUG)
     add_repo = 'add_repo.html'
-    db_location = "/elfowl/db.sqlite3"
-    repo_locations = "/elfowl/data/downloads"
-    image_store_location = "/elfowl/data/images"
+    db_location = "/var/lib/sqlite/db.sqlite3"
+    repo_locations = "/app_data/downloads"
+    image_store_location = "/app_data/images"
 
     def get(self, request):
         template = loader.get_template(self.add_repo)
@@ -55,7 +55,7 @@ class add_repo(TemplateView):
             api_key=api_value, #from session
             org_id=org_value, #from session
             vuln_code_host="nginx",
-            truffles_config_file="/elfowl/truffles_config.yml",
+            truffles_config_file="/app/truffles_config.yml",
             max_threads=10
         )
         run_backend.threadManager.create_a_pool("add_repo")

@@ -7,7 +7,6 @@ from backend import git_handler
 from backend import secret_finder
 from backend import file_manager
 from backend import code_analyzer
-from backend import test_secrets
 
 from json import dumps, loads
 import logging
@@ -17,7 +16,7 @@ class runBackend:
     A class that represents a dashboard for repository analysis.
 
     Args:
-        db_file (str): The path to the database file.
+        db_location (str): The path to the database file.
         repo_locations (str): The locations of the repositories.
         image_store_location (str): The location to store images.
         openai_model (str): The OpenAI model to use.
@@ -28,14 +27,14 @@ class runBackend:
         max_threads (int, optional): The maximum number of threads. Defaults to 5.
     """
 
-    def __init__(self, db_file, repository_table_name, repository_info_table_name,
+    def __init__(self, db_location, repository_table_name, repository_info_table_name,
                  repository_dependency_table_name, repo_locations, image_store_location, openai_model,
                  api_key, org_id, vuln_code_host, truffles_config_file, max_threads=5):
         """
         Initializes a new instance of the runDashboard class.
 
         Args:
-            db_file (str): The path to the database file.
+            db_location (str): The path to the database file.
             repo_locations (str): The locations of the repositories.
             image_store_location (str): The location to store images.
             openai_model (str): The OpenAI model to use.
@@ -50,7 +49,7 @@ class runBackend:
         self.vulnCodeSearch = cve_gatherer.VulnerableCodeSearch(vuln_code_host=vuln_code_host)
         self.fileManager = file_manager.FileManager()
         self.threadManager = thread_handler.ThreadManager()
-        self.databaseManager = database_handler.DatabaseManager(db_file,
+        self.databaseManager = database_handler.DatabaseManager(db_location,
                                                                 repositry_table_name=repository_table_name,
                                                                 information_map_table_name=repository_info_table_name,
                                                                 dependencies_map_table_name=repository_dependency_table_name)
@@ -60,7 +59,7 @@ class runBackend:
         self.cfgAnalyzer = code_analyzer.CodeCFGAnalyzer(save_image_location=image_store_location)
         self.image_store_location = image_store_location
         self.repo_locations = repo_locations
-        self.db_location = db_file
+        self.db_location = db_location
         self.openai_model = openai_model
         self.max_threads = max_threads
         self.magik_hash = ""
@@ -304,22 +303,4 @@ class runBackend:
         return self.databaseManager._get_table(table_name=table_name)
 
 if __name__ == "__main__":
-    from test_secrets import apikey, orgid
-    logging.basicConfig(level=logging.DEBUG)
-    db_location = "/elfowl/data/database/test.sqlite"
-    repo_locations = "/elfowl/data/downloads"
-    image_store_location = "/elfowl/data/images"
-    openai_model = "gpt-3.5-turbo-1106"
-    test_dash = runBackend(db_location, repo_locations, image_store_location, openai_model=openai_model,\
-        api_key=apikey, org_id=orgid, vuln_code_host="nginx", truffles_config_file="/elfowl/truffles_config.yml", max_threads=10)
-    try:
-        test_dash.setup_tables()
-        test_repo = "https://github.com/videvelopers/Vulnerable-Flask-App"
-        test_branch = "main"
-        test_dash.new_repo_sequence(test_repo, test_branch)
-        if input("Cleanup? (y/n): ") == "y":
-            test_dash.cleanup()
-    except Exception as e:
-        print(f"Error: {e}")
-        test_dash.cleanup()
-        exit()
+    pass

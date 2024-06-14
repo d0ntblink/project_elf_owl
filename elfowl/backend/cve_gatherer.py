@@ -37,7 +37,6 @@ class VulnerableCodeSearch:
                     updated_dependencies[lib_name] = result
         else:
             self.logger.error("Library type not supported.")
-            print("Library type not supported.")
         return updated_dependencies
 
     def get_endpoint(self, endpoint, params=None):
@@ -60,8 +59,6 @@ class VulnerableCodeSearch:
             return response.json()['results'][0]
         else:
             self.logger.error(f"Error occurred while getting endpoint: {response.text}")
-            print("Error occurred while getting endpoint:")
-            print(response.text)
             return None
 
     def search_pkg(self, name='', namespace='', packagerelatedvulnerability__fix='', page=1, page_size=1\
